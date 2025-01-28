@@ -1,0 +1,41 @@
+body {
+    font-family: 'Sora', sans-serif;
+    background-color: #151515;
+    color: #e9e7db;
+    margin: 0;
+    padding: 0;
+  }
+  
+  h1 {
+    color: #e9e7db;
+    font-weight: 400;
+    padding: 75px 15px 20px 150px;
+    text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db94, 0 0 5px #e9e7db30;
+    text-shadow: 0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
+
+  }
+  
+  p {
+    font-weight: 100;
+    padding: 10px 15px 20px 35px;
+    text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db08, 0 0 5px #e9e7db30;
+  }
+  p2 {
+    font-weight: 100;
+    padding: 10px 15px 20px 40px;
+  }
+
+
+  nav a {
+    color: #e9e7db; /* Link color */
+    text-decoration: none; /* Remove underline */
+    margin-right: 10px; /* Add space between links */
+    font-weight: 200; /* Medium font weight */
+    padding: 10px 15px 20px 27px;
+  }
+  
+  nav a:hover {
+    /*text-decoration: underline; /* Add underline on hover */
+    text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db1d, 0 0 5px #e9e7db30;
+  }
+
