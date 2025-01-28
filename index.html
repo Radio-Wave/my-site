@@ -1,11 +1,104 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>My Art Portfolio</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Art Portfolio</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #9f97a7; /* Background color */
+            color: #2e2b33; /* Body text color */
+            display: flex;
+        }
+
+        /* Sidebar styles */
+        .sidebar {
+            width: 250px;
+            background-color: #2e2b33; /* Dark background for contrast */
+            color: #ffffff; /* Light text color */
+            height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+            position: fixed;
+        }
+
+        .sidebar h2 {
+            color: #89043d; /* Heading/title color */
+            font-size: 24px;
+        }
+
+        .sidebar ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .sidebar ul li {
+            margin: 15px 0;
+        }
+
+        .sidebar ul li a {
+            text-decoration: none;
+            color: #ffffff;
+            font-size: 18px;
+        }
+
+        .sidebar ul li a:hover {
+            text-decoration: underline;
+        }
+
+        /* Main content styles */
+        .content {
+            margin-left: 250px; /* Make space for the sidebar */
+            padding: 20px;
+        }
+
+        h1 {
+            color: #89043d; /* Heading/title color */
+            font-size: 32px;
+        }
+
+        p {
+            font-size: 18px;
+            line-height: 1.6;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
 </head>
 <body>
-  <h1>Welcome to My Art Portfolio</h1>
-  <p>Here’s where I’ll share my work.</p>
-  <img src="artwork.jpg" alt="My Artwork" />
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Menu</h2>
+        <ul>
+            <li><a href="#home">Home</a></li>
+            <li><a href="#gallery">Gallery</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#contact">Contact</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+        <h1>Welcome to My Art Portfolio</h1>
+        <p>This is where I showcase my computational artwork. Feel free to explore my gallery and learn more about my process.</p>
+
+        <h2 id="gallery">Gallery</h2>
+        <img src="artwork.jpg" alt="Sample artwork">
+
+        <h2 id="about">About</h2>
+        <p>I'm a computational artist exploring the intersection of technology and creativity. This portfolio is a space to share my work with the world.</p>
+
+        <h2 id="contact">Contact</h2>
+        <p>If you'd like to reach out, feel free to email me at <a href="mailto:your-email@example.com">your-email@example.com</a>.</p>
+    </div>
+
 </body>
 </html>
