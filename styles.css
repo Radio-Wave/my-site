@@ -1,71 +1,77 @@
 body {
-    font-family: 'Sora', sans-serif;
-    background-color: #151515;
-    color: #e9e7db;
-    margin: 0;
-    display: flex;
-  }
-  
-  h1 {
-    color: #e9e7db;
-    font-weight: 400;
-    padding: 75px 15px 20px 15px;
-    text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db94, 0 0 5px #e9e7db30;
-    text-shadow: 0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
-
-  }
-  
-  p {
-    font-weight: 100;
-    padding: 10px 15px 20px 35px;
-    text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db08, 0 0 5px #e9e7db30;
-  }
-  p2 {
-    font-weight: 100;
-    padding: 10px 15px 20px 40px;
-  }
-
-
-  nav a {
-    color: #e9e7db; /* Link color */
-    text-decoration: none; /* Remove underline */
-    margin-right: 2px; /* Add space between links */
-    font-weight: 200; /* Medium font weight */
-    padding: 2px 2px 2px 2px;
-  }
-  
-  nav a:hover {
-    /*text-decoration: underline; /* Add underline on hover */
-    text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db1d, 0 0 5px #e9e7db30;
-    text-shadow: 0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
-  }
-
-  .sidebar{
-    width: 250px;
-    height: 100vh;
-    padding: 20px;
-    position: fixed;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .sidebar nav{
-    display: flex;
-    flex-direction: column;
-  }
-
-  .sidebar nav a{
-    text-decoration: none;
-    color: #e9e7db;
-    font-weight: 200; /* Medium font weight */
-    margin: 10px;
-    position: relative;
-    transition: text-shadow 0.3s ease-in-out;
-  }
-
-  .sidebar nav a:hover{
-    text-shadow: 0 0 5px #e9e7db73, 0 0 5px #e9e7db1d, 0 0 5px #e9e7db30,
-    0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
+  font-family: 'Sora', sans-serif;
+  background-color: #151515;
+  color: #e9e7db;
+  margin: 0;
+  display: flex;
 }
 
+h1 {
+  color: #e9e7db;
+  font-weight: 400;
+  padding: 75px 15px 20px 15px;
+  text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db94, 0 0 5px #e9e7db30;
+  text-shadow: 0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
+
+}
+
+p {
+  font-weight: 100;
+  padding: 10px 15px 20px 35px;
+  text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db08, 0 0 5px #e9e7db30;
+}
+p2 {
+  font-weight: 100;
+  padding: 10px 15px 20px 40px;
+}
+
+
+nav a {
+  color: #e9e7db; /* Link color */
+  text-decoration: none; /* Remove underline */
+  margin-right: 2px; /* Add space between links */
+  font-weight: 200; /* Medium font weight */
+  padding: 2px 2px 2px 2px;
+}
+
+nav a:hover {
+  /*text-decoration: underline; /* Add underline on hover */
+  text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db1d, 0 0 5px #e9e7db30;
+  text-shadow: 0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
+}
+
+.sidebar{
+  width: 250px;
+  height: 100vh;
+ padding: 150px 10px 10px 10px;
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.sidebar nav{
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar nav a{
+  text-decoration: none;
+  color: #e9e7db;
+  font-weight: 200; /* Medium font weight */
+  margin: 10px;
+  position: relative;
+  transition: text-shadow 0.3s ease-in-out;
+}
+
+.sidebar nav a:hover{
+  text-shadow: 0 0 5px #e9e7db73, 0 0 5px #e9e7db1d, 0 0 5px #e9e7db30,
+  0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
+}
+
+/* Content Section (Text on the Right) */
+.content {
+  margin-left: 280px; /* Adjust to match the sidebar width + some spacing */
+  padding: 20px;
+  max-width: 800px; /* Optional: Restrict width for better readability */
+}
