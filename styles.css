@@ -29,9 +29,9 @@ body {
   nav a {
     color: #e9e7db; /* Link color */
     text-decoration: none; /* Remove underline */
-    margin-right: 10px; /* Add space between links */
+    margin-right: 2px; /* Add space between links */
     font-weight: 200; /* Medium font weight */
-    padding: 40px 10px 10px 10px;
+    padding: 2px 2px 2px 2px;
   }
   
   nav a:hover {
