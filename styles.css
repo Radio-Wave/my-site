@@ -9,7 +9,7 @@ body {
   h1 {
     color: #e9e7db;
     font-weight: 400;
-    padding: 75px 15px 20px 150px;
+    padding: 75px 15px 20px 15px;
     text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db94, 0 0 5px #e9e7db30;
     text-shadow: 0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
 
