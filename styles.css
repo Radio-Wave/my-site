@@ -50,7 +50,7 @@ nav a {
 }
 
 nav a:hover {
-  /*text-decoration: underline; /* Add underline on hover */
+  /*text-decoration: underline; /* Add glow on hover */
   text-shadow: 0 0 5px #e9e7dbcb, 0 0 5px #e9e7db94, 0 0 5px #e9e7db30;
   text-shadow: 0 0 15px #e9e7db9f, 0 0 25px #e9e7db, 0 0 15px #e9e7db30;
 }
@@ -89,4 +89,9 @@ nav a:hover {
   margin-left: 280px; /* Adjust to match the sidebar width + some spacing */
   padding: 20px;
   max-width: 800px; /* Optional: Restrict width for better readability */
+}
+
+.image-row {
+  display: flex;
+  justify-content: space-between; /* this will add equal space between each image */
 }
