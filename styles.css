@@ -52,7 +52,7 @@ nav a {
   text-decoration: none; /* Remove underline */
   margin-right: 2px; /* Add space between links */
   font-weight: 200; /* Medium font weight */
-  padding: 2px 2px 2px 2px;
+  padding: 2px 2px 8px 2px;
   text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db94, 0 0 5px #e9e7db30;
   text-shadow: 0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
 }
