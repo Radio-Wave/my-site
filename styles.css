@@ -63,6 +63,22 @@ nav a:hover {
   text-shadow: 0 0 25px #e9e7db9f, 0 0 25px #e9e7db, 0 0 15px #e9e7db;
 }
 
+nav b {
+  color: #e9e7db; /* Link color */
+  text-decoration: none; /* Remove underline */
+  margin-right: 2px; /* Add space between links */
+  font-weight: 400; /* Medium font weight */
+  padding: 2px 2px 8px 2px;
+  text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db94, 0 0 5px #e9e7db30;
+  text-shadow: 0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
+}
+
+nav b:hover {
+  /*text-decoration: underline; /* Add glow on hover */
+  text-shadow: 0 0 5px #e9e7dbcb, 0 0 5px #e9e7db94, 0 0 5px #e9e7db9f;
+  text-shadow: 0 0 25px #e9e7db9f, 0 0 25px #e9e7db, 0 0 15px #e9e7db;
+}
+
 .sidebar{
   width: 250px;
   height: 100vh;
