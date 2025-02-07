@@ -59,8 +59,8 @@ nav a {
 
 nav a:hover {
   /*text-decoration: underline; /* Add glow on hover */
-  text-shadow: 0 0 5px #e9e7dbcb, 0 0 5px #e9e7db94, 0 0 5px #e9e7db30;
-  text-shadow: 0 0 15px #e9e7db9f, 0 0 25px #e9e7db, 0 0 15px #e9e7db30;
+  text-shadow: 0 0 5px #e9e7dbcb, 0 0 5px #e9e7db94, 0 0 5px #e9e7db9f;
+  text-shadow: 0 0 25px #e9e7db9f, 0 0 25px #e9e7db, 0 0 15px #e9e7db;
 }
 
 .sidebar{
