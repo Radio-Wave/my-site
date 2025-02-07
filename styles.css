@@ -109,3 +109,14 @@ nav a:hover {
   flex: 1 1 300px;
   max-width: 300px;
 }
+
+.image-float {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between; /* this will add equal space between each image */
+}
+.image-float img{
+  flex: 1 1 300px;
+  max-width: 400px;
+  padding-left: 30%;
+}
