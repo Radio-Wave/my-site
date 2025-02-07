@@ -4,6 +4,7 @@ body {
   color: #e9e7db;
   margin: 15;
   display: flex;
+  font-size: 1rem;
 }
 
 h1 {
@@ -12,7 +13,7 @@ h1 {
   padding: 75px 15px 20px 15px;
   text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db94, 0 0 5px #e9e7db30;
   text-shadow: 0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
-
+  font-size: 1.5rem;
 }
 
 h2 {
@@ -21,6 +22,7 @@ h2 {
   padding: 75px 15px 20px 15px;
   text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db94, 0 0 5px #e9e7db30;
   text-shadow: 0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
+  font-size: 1.25rem;
 }
 
 h3{
@@ -29,6 +31,7 @@ h3{
   padding: 75px 15px 7px 15px;
   text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db94, 0 0 5px #e9e7db30;
   text-shadow: 0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
+  font-size: 1.15rem;
 }
 
 p {
@@ -37,7 +40,12 @@ p {
   text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db08, 0 0 5px #e9e7db30;
 }
 
-
+img{
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1rem 0;
+}
 
 nav a {
   color: #e9e7db; /* Link color */
@@ -93,5 +101,11 @@ nav a:hover {
 
 .image-row {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between; /* this will add equal space between each image */
+}
+
+.image-row img {
+  flex: 1 1 300px;
+  max-width: 100&;
 }
