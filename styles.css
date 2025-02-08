@@ -63,7 +63,7 @@ nav a:hover {
   text-shadow: 0 0 25px #e9e7db9f, 0 0 25px #e9e7db, 0 0 15px #e9e7db;
 }
 
-nav b {
+.sidebar nav b {
   color: #e9e7db; /* Link color */
   text-decoration: none; /* Remove underline */
   margin-right: 2px; /* Add space between links */
@@ -73,7 +73,7 @@ nav b {
   text-shadow: 0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
 }
 
-nav b:hover {
+.sidebar nav b:hover {
   /*text-decoration: underline; /* Add glow on hover */
   text-shadow: 0 0 5px #e9e7dbcb, 0 0 5px #e9e7db94, 0 0 5px #e9e7db9f;
   text-shadow: 0 0 25px #e9e7db9f, 0 0 25px #e9e7db, 0 0 15px #e9e7db;
@@ -123,7 +123,7 @@ nav b:hover {
 
 .image-row img {
   flex: 1 1 300px;
-  max-width: 300px;
+  max-width: 500px;
 }
 
 .image-float {
