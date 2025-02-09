@@ -123,17 +123,17 @@ nav a:hover {
 
 .image-row img {
   flex: 1 1 300px;
-  max-width: 500px;
+  max-width: 300px;
 }
 
 .image-float {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between; /* this will add equal space between each image */
+  justify-content: space-evenly; /* this will add equal space between each image */
   height: 50vh; /* 50% of the viewport height */
 }
 
 .image-float img{
-  height: 30vh; /* 50% of the viewport height */
+  height: 50vh; /* 50% of the viewport height */
   padding-left: 30%;
 }
