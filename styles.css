@@ -103,11 +103,6 @@ nav a:hover {
   transition: text-shadow 0.3s ease-in-out;
 }
 
-.sidebar nav a:hover{
-  text-shadow: 0 0 5px #e9e7db73, 0 0 5px #e9e7db1d, 0 0 5px #e9e7db30,
-  0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
-}
-
 /* Content Section (Text on the Right) */
 .content {
   margin-left: 280px; /* Adjust to match the sidebar width + some spacing */
