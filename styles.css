@@ -5,6 +5,7 @@ body {
   margin: 15;
   display: flex;
   font-size: 1rem;
+  font-weight: 300;
 }
 
 h1 {
