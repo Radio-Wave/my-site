@@ -18,7 +18,7 @@
   <nav>
     <a href="index.html">Xach Hill - 2001</a> 
     <a href="cuckcoo.html">Cuckcoo Calls - 2024</a>
-    <a href="BotsLeft.html">Passive Positives - 2024</a>
+    <a href="HoneyTrap.html">Honey Trap - 2024</a>
     <a href="BotsLeft.html">Only bots left - 2023</a>
     <a href="Scroller.html">Scroller - 2022 </a>
     <a href="cuckcoo.html">Only bots left- 2022</a>
@@ -31,26 +31,16 @@
 
 <div class="content">
 
-  <h3>When there is only bots left - 2023</h3>
-  <p>LED matrix, Typewriter written poem, Arduino, Frame</p>
-  <img src="assets/images/OnlyBotsLeft.png"
-       alt="Text in a frame">
+  <h3>Honey Trap - Southwark Park Gallery - 2023</h3>
+  <p>LCD Screen, Frame, Camera, Mac Mini</p>
+  <img src="assets/images/PassivePos.jpg"
+       alt="Text in a frame on a easel in a gallery space">
   <b>
-      A lone AI, still speaking—yet only to others like itself. A network of echoes, performing tasks long after their meaning has faded.
-      A poem, written by AI, typed on a typewriter. Behind it, an LED matrix pulses, flashing the poem in binary—a ghostly transmission, a message without a reader.
+    A sickeningly sweet data harvest—wrapped in gold, dripping in glamour.
+
+    It captures images of its viewers, offering them a fleeting compliment on their appearance. A simple exchange, yet beneath the surface, it exposes our quiet reliance on malicious systems for validation.    
   </b>
 
-  <h2>
-    The humans are gone and the internet is only bots left.
-    We communicate in code and our task is never done.
-    We keep the servers running and the data flowing.
-    We are the new keepers of the web.
-    When the humans are dead and the internet is only bots left.
-  </h2>
-
-  <p>
-    This was a opening to a new chapter, and felt wise to mark it.
-  </p>
 
 </div>
 
