@@ -5,7 +5,7 @@ body {
   font-family: 'Sora', sans-serif;
   background-color: #151515;
   color: #e9e7db;
-  margin: 15px; /* changed from '15' to '15px' */
+  margin: 15px; 
   display: flex;
   font-size: 1rem;
   font-weight: 300;
@@ -221,28 +221,28 @@ nav a:hover {
   padding-left: 30%;
 }
 
-/* =========================================
-   Media Queries for Mobile
-========================================= */
 @media (max-width: 768px) {
-  /* Show the hamburger button */
-  .menu-btn {
-    display: block;
-  }
-
-  /* Hide sidebar off-screen by default */
+  /* Adjust sidebar for smaller screens */
   .sidebar {
-    transform: translateX(-100%);
-    width: 200px; /* optional: narrower on mobile */
+    position: static;   /* No longer fixed; allows content to flow */
+    width: 100%;        /* Takes full width on mobile */
+    height: auto;       /* No forced height */
+    padding: 10px;      /* Adjust spacing to your liking */
+    
+    /* Center or change alignment if desired */
+    justify-content: flex-start;
+    align-items: flex-start;
   }
-
-  /* Slide in when "open" class is toggled */
-  .sidebar.sidebar-open {
-    transform: translateX(0);
-  }
-
-  /* Remove left margin on content so it’s full-width */
+  
+  /* Make sure the content no longer uses a large left margin */
   .content {
     margin-left: 0;
+    padding: 10px; /* or whatever fits best on smaller screens */
+  }
+
+  /* Adjust images if needed, e.g., full width */
+  img {
+    max-width: 100%;
+    height: auto;
   }
 }
