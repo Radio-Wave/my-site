@@ -95,10 +95,11 @@ nav a:hover {
 }
 
 .sidebar nav a{
-  text-decoration: none;
-  color: #e9e7db;
-  font-weight: 200; /* Medium font weight */
-  margin: 10px;
+  color: #e9e7db; /* Link color */
+  text-decoration: none; /* Remove underline */
+  margin-right: 2px; /* Add space between links */
+  font-weight: 400; /* Medium font weight */
+  padding: 2px 2px 8px 2px;
   position: relative;
   transition: text-shadow 0.3s ease-in-out;
 }
