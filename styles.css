@@ -98,6 +98,7 @@ nav a:hover {
   color: #e9e7db; /* Link color */
   text-decoration: none; /* Remove underline */
   margin-right: 2px; /* Add space between links */
+  margin-top: 10px;
   font-weight: 400; /* Medium font weight */
   padding: 8px 2px 8px 2px;
   position: relative;
