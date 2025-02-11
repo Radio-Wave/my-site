@@ -221,28 +221,28 @@ nav a:hover {
   padding-left: 30%;
 }
 
+/* =========================================
+   Media Queries for Mobile
+========================================= */
 @media (max-width: 768px) {
-  /* Adjust sidebar for smaller screens */
-  .sidebar {
-    position: static;   /* No longer fixed; allows content to flow */
-    width: 100%;        /* Takes full width on mobile */
-    height: auto;       /* No forced height */
-    padding: 10px;      /* Adjust spacing to your liking */
-    
-    /* Center or change alignment if desired */
-    justify-content: flex-start;
-    align-items: flex-start;
-  }
-  
-  /* Make sure the content no longer uses a large left margin */
-  .content {
-    margin-left: 0;
-    padding: 10px; /* or whatever fits best on smaller screens */
+  /* Show the hamburger button */
+  .menu-btn {
+    display: block;
   }
 
-  /* Adjust images if needed, e.g., full width */
-  img {
-    max-width: 100%;
-    height: auto;
+  /* Hide sidebar off-screen by default */
+  .sidebar {
+    transform: translateX(-100%);
+    width: 200px; /* optional: narrower on mobile */
+  }
+
+  /* Slide in when "open" class is toggled */
+  .sidebar.sidebar-open {
+    transform: translateX(0);
+  }
+
+  /* Remove left margin on content so it’s full-width */
+  .content {
+    margin-left: 0;
   }
 }
