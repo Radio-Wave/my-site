@@ -1,8 +1,11 @@
+/* =========================================
+   Base / Global
+========================================= */
 body {
   font-family: 'Sora', sans-serif;
   background-color: #151515;
   color: #e9e7db;
-  margin: 15;
+  margin: 15px; /* changed from '15' to '15px' */
   display: flex;
   font-size: 1rem;
   font-weight: 300;
@@ -12,8 +15,13 @@ h1 {
   color: #e9e7db;
   font-weight: 400;
   padding: 75px 15px 20px 15px;
-  text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db94, 0 0 5px #e9e7db30;
-  text-shadow: 0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
+  text-shadow:
+    0 0 5px #e9e7db24,
+    0 0 5px #e9e7db94,
+    0 0 5px #e9e7db30,
+    0 0 15px #e9e7db24,
+    0 0 25px #e9e7db1d,
+    0 0 15px #e9e7db30;
   font-size: 1.5rem;
 }
 
@@ -21,111 +29,176 @@ h2 {
   color: #e9e7db;
   font-weight: 300;
   padding: 75px 15px 20px 15px;
-  text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db94, 0 0 5px #e9e7db30;
-  text-shadow: 0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
+  text-shadow:
+    0 0 5px #e9e7db24,
+    0 0 5px #e9e7db94,
+    0 0 5px #e9e7db30,
+    0 0 15px #e9e7db24,
+    0 0 25px #e9e7db1d,
+    0 0 15px #e9e7db30;
   font-size: 1.25rem;
 }
 
-h3{
+h3 {
   color: #e9e7db;
   font-weight: 400;
   padding: 75px 15px 7px 15px;
-  text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db94, 0 0 5px #e9e7db30;
-  text-shadow: 0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
+  text-shadow:
+    0 0 5px #e9e7db24,
+    0 0 5px #e9e7db94,
+    0 0 5px #e9e7db30,
+    0 0 15px #e9e7db24,
+    0 0 25px #e9e7db1d,
+    0 0 15px #e9e7db30;
   font-size: 1.15rem;
 }
 
 p {
   font-weight: 100;
   padding: 10px 15px 20px 15px;
-  text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db08, 0 0 5px #e9e7db30;
+  text-shadow:
+    0 0 5px #e9e7db24,
+    0 0 5px #e9e7db08,
+    0 0 5px #e9e7db30;
 }
 
-img{
+img {
   max-width: 100%;
   height: auto;
   display: block;
   margin: 1rem 0;
 }
 
+/* =========================================
+   Navigation (Global)
+========================================= */
 nav a {
-  color: #e9e7db; /* Link color */
-  text-decoration: none; /* Remove underline */
-  margin-right: 2px; /* Add space between links */
-  font-weight: 200; /* Medium font weight */
+  color: #e9e7db;
+  text-decoration: none;
+  margin-right: 2px;
+  font-weight: 200;
   padding: 2px 2px 8px 2px;
-  text-shadow: 0 0 5px #e9e7dbe3, 0 0 5px #e9e7db94, 0 0 5px #e9e7db30;
-  text-shadow: 0 0 15px #e9e7db24, 0 0 25px #e9e7dbad, 0 0 15px #e9e7db30;
+  text-shadow:
+    0 0 5px #e9e7dbe3,
+    0 0 5px #e9e7db94,
+    0 0 5px #e9e7db30,
+    0 0 15px #e9e7db24,
+    0 0 25px #e9e7dbad,
+    0 0 15px #e9e7db30;
 }
 
 nav a:hover {
-  /*text-decoration: underline; /* Add glow on hover */
-  text-shadow: 0 0 5px #e9e7dbcb, 0 0 5px #e9e7db94, 0 0 5px #e9e7db9f;
-  text-shadow: 0 0 25px #e9e7db9f, 0 0 25px #e9e7db, 0 0 15px #e9e7db;
+  text-shadow:
+    0 0 5px #e9e7dbcb,
+    0 0 5px #e9e7db94,
+    0 0 5px #e9e7db9f,
+    0 0 25px #e9e7db9f,
+    0 0 25px #e9e7db,
+    0 0 15px #e9e7db;
+}
+
+/* =========================================
+   Sidebar
+========================================= */
+/* Hamburger button: hidden on desktop by default */
+.menu-btn {
+  display: none;
+  cursor: pointer;
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 999; /* Ensure it floats above other elements */
+  font-size: 1.5rem;
+  background: none;
+  border: none;
+  color: #e9e7db;
+  text-shadow:
+    0 0 5px #e9e7db24,
+    0 0 5px #e9e7db94,
+    0 0 5px #e9e7db30,
+    0 0 15px #e9e7db24,
+    0 0 25px #e9e7db1d,
+    0 0 15px #e9e7db30;
 }
 
 .sidebar nav b {
-  color: #e9e7db; /* Link color */
-  text-decoration: none; /* Remove underline */
-  margin-right: 2px; /* Add space between links */
-  font-weight: 400; /* Medium font weight */
+  color: #e9e7db;
+  text-decoration: none;
+  margin-right: 2px;
+  font-weight: 400;
   padding: 2px 2px 8px 2px;
-  text-shadow: 0 0 5px #e9e7db24, 0 0 5px #e9e7db94, 0 0 5px #e9e7db30;
-  text-shadow: 0 0 15px #e9e7db24, 0 0 25px #e9e7db1d, 0 0 15px #e9e7db30;
+  text-shadow:
+    0 0 5px #e9e7db24,
+    0 0 5px #e9e7db94,
+    0 0 5px #e9e7db30,
+    0 0 15px #e9e7db24,
+    0 0 25px #e9e7db1d,
+    0 0 15px #e9e7db30;
 }
-
 .sidebar nav b:hover {
-  /*text-decoration: underline; /* Add glow on hover */
-  text-shadow: 0 0 5px #e9e7dbcb, 0 0 5px #e9e7db94, 0 0 5px #e9e7db9f;
-  text-shadow: 0 0 25px #e9e7db9f, 0 0 25px #e9e7db, 0 0 15px #e9e7db;
+  text-shadow:
+    0 0 5px #e9e7dbcb,
+    0 0 5px #e9e7db94,
+    0 0 5px #e9e7db9f,
+    0 0 25px #e9e7db9f,
+    0 0 25px #e9e7db,
+    0 0 15px #e9e7db;
 }
 
+/* By default, make sidebar fixed on wide screens */
 .sidebar {
   width: 250px;
   height: 100vh;
-  /* remove or reduce the large top padding */
-  padding: 10px;  
+  padding: 10px;
   position: fixed;
-  
-  /* Flexbox for vertical centering */
   display: flex;
   flex-direction: column;
-  justify-content: center;  /* center items vertically */
-  align-items: flex-start;  /* keep them left-aligned (change to 'center' if you want them center-aligned) */
-  gap: 1rem;                /* optional: adds space between items */
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1rem;
+
+  /* Transition for sliding in/out on mobile */
+  transform: translateX(0);
+  transition: transform 0.3s ease-in-out;
 }
 
-.sidebar nav{
+.sidebar nav {
   display: flex;
   flex-direction: column;
 }
 
-.sidebar nav a{
-  color: #e9e7db; /* Link color */
-  text-decoration: none; /* Remove underline */
-  margin-right: 2px; /* Add space between links */
+.sidebar nav a {
+  color: #e9e7db;
+  text-decoration: none;
+  margin-right: 2px;
   margin-top: 10px;
-  font-weight: 400; /* Medium font weight */
-  padding: 8px 2px 8px 2px;
+  font-weight: 400;
+  padding: 8px 2px;
   position: relative;
   transition: text-shadow 0.3s ease-in-out;
 }
 
-/* Content Section (Text on the Right) */
+/* =========================================
+   Content Section
+========================================= */
 .content {
-  margin-left: 280px; /* Adjust to match the sidebar width + some spacing */
+  margin-left: 280px;
   padding: 20px;
-  max-width: 800px; /* Optional: Restrict width for better readability */
-}
-.content b {
-  font-weight: 300;
-  color:#e9e7db;
+  max-width: 800px;
 }
 
+.content b {
+  font-weight: 300;
+  color: #e9e7db;
+}
+
+/* =========================================
+   Image Rows
+========================================= */
 .image-row {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-around; /* this will add equal space between each image */
+  justify-content: space-around;
 }
 
 .image-row img {
@@ -133,14 +206,43 @@ nav a:hover {
   max-width: 300px;
 }
 
+/* =========================================
+   Floating Images
+========================================= */
 .image-float {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-evenly; /* this will add equal space between each image */
-  height: 50vh; /* 50% of the viewport height */
+  justify-content: space-evenly;
+  height: 50vh;
 }
 
-.image-float img{
-  height: 50vh; /* 50% of the viewport height */
+.image-float img {
+  height: 50vh;
   padding-left: 30%;
+}
+
+/* =========================================
+   Media Queries for Mobile
+========================================= */
+@media (max-width: 768px) {
+  /* Show the hamburger button */
+  .menu-btn {
+    display: block;
+  }
+
+  /* Hide sidebar off-screen by default */
+  .sidebar {
+    transform: translateX(-100%);
+    width: 200px; /* optional: narrower on mobile */
+  }
+
+  /* Slide in when "open" class is toggled */
+  .sidebar.sidebar-open {
+    transform: translateX(0);
+  }
+
+  /* Remove left margin on content so it’s full-width */
+  .content {
+    margin-left: 0;
+  }
 }
