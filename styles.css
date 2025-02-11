@@ -113,7 +113,7 @@ nav a:hover {
 .image-row {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between; /* this will add equal space between each image */
+  justify-content: space-around; /* this will add equal space between each image */
 }
 
 .image-row img {
