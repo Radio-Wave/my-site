@@ -1,6 +1,11 @@
 /* =========================================
    Base / Global
 ========================================= */
+#head{
+  justify-content: center;
+}
+
+
 body {
   font-family: 'Sora', sans-serif;
   background-color: #151515;
