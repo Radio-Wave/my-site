@@ -2,6 +2,13 @@
    Base / Global
 ========================================= */
 
+
+#TGIC1{
+  padding-top: 20%;
+  position: absolute;
+}
+
+
 #head{
   width: 1000px;
   top: 44%;
