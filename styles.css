@@ -2,6 +2,11 @@
    Base / Global
 ========================================= */
 
+#head{
+  width: 1000px;
+  top: 44%;
+}
+
 body {
   font-family: 'Sora', sans-serif;
   background-color: #151515;
