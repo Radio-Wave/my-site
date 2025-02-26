@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xach Hill</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@100..800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="styles.css">
+    <script src="script.js" defer></script> 
+  </head>
+  <body>
+    <button class="menu-btn" aria-label="Toggle Menu">
+      ☰
+    </button>
+    <div Class="sidebar">
+      <nav>
+        <a href="index.html">Xach Hill - 2001</a> 
+        <a href="ElectricHaiburn.html">Electric Haiburn- 2025</a>
+        <a href="cuckcoo.html">Cuckcoo Calls - 2024</a>
+        <a href="HoneyTrap.html">Honey Trap - 2024</a>
+        <a href="BotsLeft.html">Only bots left - 2023</a>
+        <a href="Scroller.html">Scroller - 2022 </a>
+        <a href="GalleryIsClosed.html">The Gallery Is Closed - 2020</a>
+        <a href="https://video.xachhill.com/">Short Films</a>
+        <a href="About.html">About</a>
+      </nav>
+    </div>
+
+<div class="content">
+
+  <h3>Electric Haiburn</h3>
+  <p>LED matrix display, typed poetry on paper</p>
+  <img src="assets/images/CrookedTooth_1.jpeg"
+       alt="Framed paper with words illiminated behind">
+
+       <h2>Poem: Crooked Smile 2024
+  </h2>
+
+  <p>
+    My interpretation of a burning haibun-a dynamic poetry piece where a prose poem is obscured, only partially revealed through subtle backlighting. Select words and phrases emerge, never exposing the full text, instead recontextualizing its meaning and forming new, fragmented poems from the original. This interplay between visibility and erasure embellishes the source text, inviting reinterpretation and transformation.
+  </p>
+
+
+
+    
+</div>
+
+</body>
+</html>
