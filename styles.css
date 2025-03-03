@@ -21,6 +21,31 @@
   left: 200px;
 }
 
+#arenaLink {
+    color: #e9e7db;
+    text-decoration: none;
+    margin-right: 2px;
+    font-weight: 500;
+    padding: 2px 2px 8px 2px;
+    text-shadow:
+      0 0 5px #e9e7dbe3,
+      0 0 5px #e9e7db94,
+      0 0 5px #e9e7db30,
+      0 0 15px #e9e7db24,
+      0 0 25px #e9e7dbad,
+      0 0 15px #e9e7db30;
+  }
+  
+#arenaLink:hover {
+    text-shadow:
+      0 0 5px #e9e7dbcb,
+      0 0 5px #e9e7db94,
+      0 0 5px #e9e7db9f,
+      0 0 25px #e9e7db9f,
+      0 0 25px #e9e7db,
+      0 0 15px #e9e7db;
+  }
+
 body {
   font-family: 'Sora', sans-serif;
   background-color: #151515;
