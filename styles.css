@@ -14,11 +14,11 @@
   top: 44%;
 }
 
-#BotsLeft{
-  width: 500px;
-  position: fixed;
-  top: 500px;
-  left: 200px;
+#BotsLeft {
+  width: 100%;
+  max-width: 100%;
+  position: static;
+  margin: 2rem 0;
 }
 
 #arenaLink {
@@ -237,6 +237,55 @@ nav a:hover {
   color: #e9e7db;
 }
 
+.exhibit-list {
+  font-size: 0.9rem;
+  font-weight: 200;
+  padding-top: 0;
+  color: rgba(233, 231, 219, 0.75);
+  letter-spacing: 0.05em;
+}
+
+.exhibit-list span {
+  font-weight: 400;
+  text-transform: uppercase;
+  margin-right: 0.35rem;
+  color: rgba(233, 231, 219, 0.9);
+}
+
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin: 45px 0 30px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  color: rgba(233, 231, 219, 0.6);
+}
+
+.section-divider::before,
+.section-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(233, 231, 219, 0) 0%, rgba(233, 231, 219, 0.65) 35%, rgba(233, 231, 219, 0.65) 65%, rgba(233, 231, 219, 0) 100%);
+  box-shadow:
+    0 0 6px rgba(233, 231, 219, 0.4),
+    0 0 14px rgba(233, 231, 219, 0.25);
+}
+
+.section-divider span {
+  white-space: nowrap;
+  font-weight: 400;
+  color: rgba(233, 231, 219, 0.85);
+}
+
+.deep-dive {
+  display: grid;
+  gap: 0.5rem;
+  padding-bottom: 1.5rem;
+}
+
 /* =========================================
    Image Rows
 ========================================= */
@@ -249,6 +298,157 @@ nav a:hover {
 .image-row img {
   flex: 1 1 300px;
   max-width: 300px;
+}
+
+/* =========================================
+   Image Gallery
+========================================= */
+.gallery {
+  column-width: 260px;
+  column-gap: 1.5rem;
+  padding: 20px 0;
+}
+
+.gallery-item {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0 0 1.5rem;
+  width: 100%;
+  break-inside: avoid;
+}
+
+.gallery-thumb {
+  position: relative;
+  border: none;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+  width: 100%;
+}
+
+.gallery-thumb:focus-visible {
+  outline: 2px solid #e9e7db;
+  outline-offset: 4px;
+}
+
+.gallery-thumb img {
+  width: 100%;
+  margin: 0;
+  box-shadow:
+    0 0 8px rgba(233, 231, 219, 0.15),
+    0 0 16px rgba(233, 231, 219, 0.25);
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.gallery-thumb:hover img,
+.gallery-thumb:focus-visible img {
+  transform: translateY(-4px);
+  box-shadow:
+    0 0 12px rgba(233, 231, 219, 0.35),
+    0 0 30px rgba(233, 231, 219, 0.25);
+}
+
+.gallery-item figcaption {
+  font-size: 0.85rem;
+  font-weight: 200;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: rgba(233, 231, 219, 0.8);
+}
+
+@media (max-width: 768px) {
+  .gallery {
+    column-count: 1;
+    column-width: auto;
+  }
+}
+
+/* =========================================
+   Lightbox
+========================================= */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 2rem;
+  background: radial-gradient(circle at center, rgba(92, 90, 84, 0.45), rgba(10, 10, 10, 0.92));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 1000;
+}
+
+.lightbox.lightbox-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.lightbox-figure {
+  max-width: min(900px, 90vw);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  text-align: center;
+}
+
+.lightbox-image {
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
+  box-shadow:
+    0 0 18px rgba(233, 231, 219, 0.25),
+    0 0 50px rgba(233, 231, 219, 0.2);
+}
+
+.lightbox-description {
+  font-size: 0.95rem;
+  font-weight: 200;
+  color: rgba(233, 231, 219, 0.9);
+  text-shadow:
+    0 0 6px rgba(233, 231, 219, 0.25);
+}
+
+.lightbox-button {
+  border: none;
+  background: rgba(12, 12, 12, 0.6);
+  color: #e9e7db;
+  font-size: 2rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.lightbox-button:hover,
+.lightbox-button:focus-visible {
+  background: rgba(233, 231, 219, 0.25);
+  transform: scale(1.05);
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  font-size: 2.5rem;
+}
+
+.lightbox-prev,
+.lightbox-next {
+  font-size: 2.25rem;
+}
+
+body.no-scroll {
+  overflow: hidden;
 }
 
 /* =========================================
