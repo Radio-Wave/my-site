@@ -196,11 +196,18 @@ nav a:hover {
   height: 100vh;
   padding: 10px;
   position: fixed;
+  top: 0;
+  left: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: flex-start;
   gap: 1rem;
+  background: #151515;
+  z-index: 900;
+  box-shadow:
+    0 0 24px rgba(0, 0, 0, 0.6),
+    0 0 32px rgba(0, 0, 0, 0.4);
 
   /* Transition for sliding in/out on mobile */
   transform: translateX(0);
@@ -592,8 +599,8 @@ nav a:hover {
 
 .lightbox-figure {
   width: auto;
-  max-width: min(900px, 92vw);
-  max-height: 85vh;
+  max-width: 94vw;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -604,9 +611,9 @@ nav a:hover {
 .lightbox-image {
   width: auto;
   height: auto;
-  max-height: 72vh;
+  max-height: 80vh;
   object-fit: contain;
-  max-width: min(900px, 92vw);
+  max-width: min(1100px, 94vw);
   box-shadow:
     0 0 18px rgba(233, 231, 219, 0.25),
     0 0 50px rgba(233, 231, 219, 0.2);
@@ -684,6 +691,7 @@ body.no-scroll {
   .sidebar {
     transform: translateX(-100%);
     width: 200px; /* optional: narrower on mobile */
+    height: 100vh;
   }
 
   /* Slide in when "open" class is toggled */
@@ -721,13 +729,13 @@ body.no-scroll {
   .lightbox-figure {
     width: auto;
     max-width: 100%;
-    max-height: none;
+    max-height: 86vh;
   }
 
   .lightbox-image {
     width: auto;
     max-width: 100%;
-    max-height: 78vh;
+    max-height: 82vh;
   }
 
   .lightbox-prev,
