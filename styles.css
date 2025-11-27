@@ -268,7 +268,7 @@ nav a:hover {
   content: "";
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, rgba(233, 231, 219, 0) 0%, rgba(233, 231, 219, 0.65) 35%, rgba(233, 231, 219, 0.65) 65%, rgba(233, 231, 219, 0) 100%);
+  background: rgba(233, 231, 219, 0.75);
   box-shadow:
     0 0 6px rgba(233, 231, 219, 0.4),
     0 0 14px rgba(233, 231, 219, 0.25);
