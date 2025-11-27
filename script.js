@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const menuBtn = document.querySelector('.menu-btn');
   const sidebar = document.querySelector('.sidebar');
-  const lightbox = document.querySelector('[data-lightbox]');
+  const lightbox = ensureLightbox();
 
   // 1. Load the nav.html into your sidebar
   if (sidebar) {
@@ -28,6 +28,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initialiseGallery(lightbox);
 });
+
+function ensureLightbox() {
+  const existing = document.querySelector('[data-lightbox]');
+  if (existing) return existing;
+
+  const lightbox = document.createElement('div');
+  lightbox.className = 'lightbox';
+  lightbox.setAttribute('data-lightbox', '');
+  lightbox.setAttribute('aria-hidden', 'true');
+
+  lightbox.innerHTML = `
+    <button type="button" class="lightbox-button lightbox-close" aria-label="Close gallery">&times;</button>
+    <button type="button" class="lightbox-button lightbox-prev" aria-label="Previous image">&#8249;</button>
+    <figure class="lightbox-figure">
+      <img class="lightbox-image" src="" alt="">
+      <figcaption class="lightbox-description"></figcaption>
+    </figure>
+    <button type="button" class="lightbox-button lightbox-next" aria-label="Next image">&#8250;</button>
+  `;
+
+  document.body.appendChild(lightbox);
+  return lightbox;
+}
 
 function initialiseGallery(lightbox) {
   const galleries = document.querySelectorAll('[data-gallery]');

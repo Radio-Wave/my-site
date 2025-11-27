@@ -1,39 +1,241 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
 
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xach Hill</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@100..800&display=swap" rel="stylesheet">
-    
-    <link rel="stylesheet" href="styles.css">
-    <script src="script.js" defer></script> 
-  </head>
-  <body>
-    <button class="menu-btn" aria-label="Toggle Menu">
-      ☰
-    </button>
-    <div Class="sidebar" if=""sidebar>
+<head>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Xach Hill</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@100..800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+</head>
+
+<body>
+  <button class="menu-btn" aria-label="Toggle Menu">
+    ☰
+  </button>
+  <div Class="sidebar">
+    <nav>
+      <a href="index.html">Xach Hill - 2001</a>
+      <a href="020524.html">020524- 2025</a>
+      <a href="ElectricHaibun.html">Electric Haibun- 2025</a>
+      <a href="Cuckoo.html">Cuckoo Calls - 2024</a>
+      <a href="HoneyTrap.html">Honey Trap - 2024</a>
+      <a href="BotsLeft.html">Only bots left - 2023</a>
+      <a href="Scroller.html">Scroller - 2022 </a>
+      <a href="GalleryIsClosed.html">The Gallery Is Closed - 2020</a>
+      <a href="https://video.xachhill.com/">Short Films</a>
+      <a href="About.html">About</a>
+    </nav>
+  </div>
+
+  <div class="content project-content">
+
+    <header class="project-hero">
+      <p class="project-eyebrow">Computational poem sculpture</p>
+      <h1>The Place Where It's Buried — 2025</h1>
+      <p class="project-lede">
+        LED matrix panels and steel plates collapsing poetry into code.
+        A meditation on digital decay, bed rot, and the quiet erosion of self beneath luminous grids.
+      </p>
+    </header>
+
+    <figure class="project-hero-media">
+      <img src="assets/images/TBWIB_1.JPG" alt="LED panels lit up in a gallery setting">
+      <figcaption>BitRot install, poem collapsing into noise mid-cycle.</figcaption>
+    </figure>
+
+    <div class="project-meta">
+      <div>
+        <span class="label">Medium</span>
+        <p>LED panels · steel · custom electronics · Amalgo.py</p>
+      </div>
+      <div>
+        <span class="label">Exhibited</span>
+        <p>BitRot · inaugural group show for Phreaking collective</p>
+      </div>
+      <div>
+        <span class="label">Role</span>
+        <p>Concept · build · curation</p>
+      </div>
     </div>
 
-<div class="content">
+    <div class="section-divider">
+      <span>Installation Notes</span>
+    </div>
 
-  <h3>The Place Where It's Buried - 2025</h3>
-  <p>Led Panels, Steel</p>
-  <img src="assets/images/TBWIB_1.JPG"
-       alt="room with LED panels littup">
+    <section class="project-body">
+      <p>
+        The installation functions as both sculpture and computational poem. Born from manic bed rot, each fragment of
+        language is
+        hidden, obfuscated, and revealed only when the software chooses to align its panels. Viewers encounter a
+        restless surface
+        that slowly glitches into legibility, echoing BitRot’s meditation on data decay and the erosion of the digital
+        self.
+      </p>
+      <p>
+        The piece was conceived with the launch for the Phreaking collective—a stage to explore how poetic systems
+        and
+        hardware can co-author a narrative. The show title anchors the work, bit rot, bed rot a poem drawn from depth of
+        both, interfaced with a bed of cold steel.
+      </p>
+    </section>
 
-       <h2>Pannels and words collapsed into themselves</h2>
+    <div class="section-divider">
+      <span>System</span>
+    </div>
 
-       <p>
-        A computational poem-based sculpture, part of the show BitRot that I organised and curated, and the inaugural group show for the Phreaking collective that I am a founder and member of. More about the collective at Phreaking.co.uk<br>
-      <br>This work played with the show's theme BitRot, the slow degradation of digital data, files decaying and hard drives corrupting, and its sister term Bed Rot, the erosion of self through the digital. The poem, and namesake for the work, written in a state of manic bed rot, is as common for me, obfuscated and hidden throughout the work, though hardware and software reading the whole poem is intentionally obtuse.<br>
-       <br> Running on a 42 x 64 x 2-pitch LED matrix panel, the kind used in volumes and billboards, and 8 Adafruit microcontrollers, all plugged into a Mac mini. The program running it, Amalgo.py, is a custom project that has been growing from previous panels projects now made into a full suite for matrix control. Featuring a GUI, panel control panel, serial mapping, and timeline control. This was vital to be able to pace the work properly and allow for moments of calm and intensity, giving some patterns space to breathe. The other main use of this software was to let me painstakingly align each panel so when called on they could all show one cohesive image despite being randomly placed.<br>
-       </p>
-</div>
+    <section class="project-body">
+      <p>
+        Eight Adafruit microcontrollers feed a 42×64×2 pitch LED matrix array, each panel running a different slice of
+        the poem.
+        Everything routes through a Mac mini running <em>Amalgo.py</em>, a custom matrix control suite I have been
+        building across multiple
+        panel projects. The software’s GUI, serial mapping, and timeline sequencing allow the installation to
+        breathe—shifting
+        from calm pulses to intense cascades.
+      </p>
+      <p>
+        Amalgo.py was also used to painstakingly align the panels so that, when summoned, they can briefly resolve into
+        a cohesive image.
+        Then they fracture again, returning to static, drifting text, and the sense that the poem might never be fully
+        recovered.
+      </p>
+    </section>
+
+    <div class="section-divider">
+      <span>Documentation</span>
+    </div>
+
+    <div class="gallery" data-gallery>
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/images/TBWIB_1.JPG"
+          data-description="LED grid glowing in a darkened room during BitRot.">
+          <img src="assets/images/TBWIB_1.JPG" alt="LED panels lit up in a gallery setting">
+        </button>
+        <figcaption>View from Bitrot</figcaption>
+      </figure>
+
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/BitRot/JPG/ThePlaceWhereItIsBuried-1.jpg"
+          data-description="LED grid glowing in a darkened room during BitRot.">
+          <img src="assets/BitRot/WebP/ThePlaceWhereItIsBuried-1.webp" alt="LED panels lit up in a gallery setting">
+        </button>
+        <figcaption>Dappled dots</figcaption>
+      </figure>
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/BitRot/JPG/ThePlaceWhereItIsBuried-2.jpg"
+          data-description="LED grid glowing in a darkened room during BitRot.">
+          <img src="assets/BitRot/WebP/ThePlaceWhereItIsBuried-2.webp" alt="LED panels lit up in a gallery setting">
+        </button>
+        <figcaption>Fungal spread pattern</figcaption>
+      </figure>
+
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/BitRot/JPG/ThePlaceWhereItIsBuried-3.jpg"
+          data-description="LED grid glowing in a darkened room during BitRot.">
+          <img src="assets/BitRot/WebP/ThePlaceWhereItIsBuried-3.webp" alt="LED panels lit up in a gallery setting">
+        </button>
+        <figcaption>Glitch</figcaption>
+      </figure>
+
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/BitRot/JPG/ThePlaceWhereItIsBuried-4.jpg"
+          data-description="LED grid glowing in a darkened room during BitRot.">
+          <img src="assets/BitRot/WebP/ThePlaceWhereItIsBuried-4.webp" alt="LED panels lit up in a gallery setting">
+        </button>
+        <figcaption>Curled skeleton</figcaption>
+      </figure>
+
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/BitRot/JPG/ThePlaceWhereItIsBuried-5.jpg"
+          data-description="LED grid glowing in a darkened room during BitRot.">
+          <img src="assets/BitRot/WebP/ThePlaceWhereItIsBuried-5.webp" alt="LED panels lit up in a gallery setting">
+        </button>
+        <figcaption>Settup</figcaption>
+      </figure>
+
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/BitRot/JPG/ThePlaceWhereItIsBuried-6.jpg"
+          data-description="LED grid glowing in a darkened room during BitRot.">
+          <img src="assets/BitRot/WebP/ThePlaceWhereItIsBuried-6.webp" alt="LED panels lit up in a gallery setting">
+        </button>
+        <figcaption>Lost in static</figcaption>
+      </figure>
+
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/BitRot/JPG/ThePlaceWhereItIsBuried-7.jpg"
+          data-description="LED grid glowing in a darkened room during BitRot.">
+          <img src="assets/BitRot/WebP/ThePlaceWhereItIsBuried-7.webp" alt="LED panels lit up in a gallery setting">
+        </button>
+        <figcaption>Glitch Closeup</figcaption>
+      </figure>
+
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/BitRot/JPG/ThePlaceWhereItIsBuried-8.jpg"
+          data-description="LED grid glowing in a darkened room during BitRot.">
+          <img src="assets/BitRot/WebP/ThePlaceWhereItIsBuried-8.webp" alt="LED panels lit up in a gallery setting">
+        </button>
+        <figcaption>Lined up bones</figcaption>
+      </figure>
+
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/BitRot/JPG/ThePlaceWhereItIsBuried-9.jpg"
+          data-description="LED grid glowing in a darkened room during BitRot.">
+          <img src="assets/BitRot/WebP/ThePlaceWhereItIsBuried-9.webp" alt="LED panels lit up in a gallery setting">
+        </button>
+        <figcaption>Top down pannels</figcaption>
+      </figure>
+
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/BitRot/JPG/ThePlaceWhereItIsBuried-10.jpg"
+          data-description="LED grid glowing in a darkened room during BitRot.">
+          <img src="assets/BitRot/WebP/ThePlaceWhereItIsBuried-10.webp" alt="LED panels lit up in a gallery setting">
+        </button>
+        <figcaption>Gallery Open</figcaption>
+      </figure>
+
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/BitRot/JPG/ThePlaceWhereItIsBuried-11.jpg"
+          data-description="LED grid glowing in a darkened room during BitRot.">
+          <img src="assets/BitRot/WebP/ThePlaceWhereItIsBuried-11.webp" alt="LED panels lit up in a gallery setting">
+        </button>
+        <figcaption>Dancing in the dark</figcaption>
+      </figure>
+
+
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/BitRot/JPG/ThePlaceWhereItIsBuried-12.jpg"
+          data-description="LED grid glowing in a darkened room during BitRot.">
+          <img src="assets/BitRot/WebP/ThePlaceWhereItIsBuried-12.webp" alt="LED panels lit up in a gallery setting">
+        </button>
+        <figcaption>Panels mid-poem</figcaption>
+      </figure>
+
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/BitRot/JPG/ThePlaceWhereItIsBuried-13.jpg"
+          data-description="LED grid glowing in a darkened room during BitRot.">
+          <img src="assets/BitRot/WebP/ThePlaceWhereItIsBuried-13.webp" alt="LED panels lit up in a gallery setting">
+        </button>
+        <figcaption>Config grid</figcaption>
+      </figure>
+    </div>
+
+
+    <div class="section-divider">
+      <span>Video Walkthrough</span>
+    </div>
+    <div class="project-video">
+      <iframe src="https://player.vimeo.com/video/000000000?title=0&byline=0&portrait=0"
+        title="The Place Where It's Buried video walkthrough" frameborder="0"
+        allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+    </div>
+  </div>
 </body>
+
 </html>

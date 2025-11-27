@@ -1,44 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
 
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xach Hill</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@100..800&display=swap" rel="stylesheet">
-    
-    <link rel="stylesheet" href="styles.css">
-    <script src="script.js" defer></script> 
-  </head>
-  <body>
-    <button class="menu-btn" aria-label="Toggle Menu">
-      ☰
-    </button>
-    <div Class="sidebar" if=""sidebar>
+<head>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Xach Hill</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@100..800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+</head>
+
+<body>
+  <button class="menu-btn" aria-label="Toggle Menu">
+    ☰
+  </button>
+  <div class="sidebar">
+    <nav>
+      <a href="index.html">Xach Hill - 2001</a>
+      <a href="ThePlaceWhereItIsBuried.html">The Place Where It's Buried - 2025</a>
+      <a href="m6wlb.html">memory 6.jpg What Lies Beneath - 2025</a>
+      <a href="020524.html">020524 - 2025</a>
+      <a href="ElectricHaibun.html">Electric Haibun- 2025</a>
+      <a href="Cuckoo.html">Cuckoo Calls - 2024</a>
+      <a href="HoneyTrap.html">Honey Trap - 2024</a>
+      <a href="BotsLeft.html">Only bots left - 2023</a>
+      <a href="Scroller.html">Scroller - 2022 </a>
+      <a href="GalleryIsClosed.html">The Gallery Is Closed - 2020</a>
+      <a href="https://video.xachhill.com/">Short Films</a>
+      <a href="About.html">About</a>
+    </nav>
+  </div>
+
+  <div class="content project-content">
+
+    <header class="project-hero">
+      <p class="project-eyebrow">Generative poem light sculpture</p>
+      <h1>memory 6.jpg — 2025</h1>
+      <p class="project-lede">
+        LED matrices and steel sheets resurfacing poem fragments from Flickr titles—an installation about collective
+        memory and
+        the stories buried in shared archives.
+      </p>
+    </header>
+
+    <figure class="project-hero-media">
+      <img src="assets/images/m6wlbImg.jpeg" alt="LED panels glowing within a steel frame">
+      <figcaption>Primary array cycling through harvested Flickr titles.</figcaption>
+    </figure>
+
+    <div class="project-meta">
+      <div>
+        <span class="label">Medium</span>
+        <p>LED panels · steel</p>
+      </div>
+      <div>
+        <span class="label">Collaboration</span>
+        <p>Flickr Foundation</p>
+      </div>
+      <div>
+        <span class="label">Focus</span>
+        <p>Algorithmic poetry from image titles</p>
+      </div>
     </div>
 
-<div class="content">
+    <div class="section-divider">
+      <span>Concept</span>
+    </div>
 
-  <h3>Memory 6.jpg What lies beneath - 2025</h3>
-  <p>Led Panels, Steel</p>
-  <img src="assets/images/m6wlbImg.jpeg"
-       alt="room with metal poles and a LED panels littup">
+    <section class="project-body">
+      <p>
+        Created in collaboration with the Flickr Foundation, this piece uses generative algorithms to weave poetry from
+        the vast
+        archive of Flickr image titles. Each poem emerges as the code pairs and rearranges captions, letting the words
+        of
+        countless strangers reshape new stories.
+      </p>
+      <p>
+        The installation becomes a reflection of digital memory and collective authorship, inviting people to rediscover
+        unseen
+        poetry scattered across the web.
+      </p>
+    </section>
 
-       <h2>Finding moments of poetry from flickr titles</h2>
+    <div class="section-divider">
+      <span>Documentation</span>
+    </div>
 
-  <p>
-   Created in collaboration with the Flickr Foundation, this project uses generative algorithms to weave poetry from the vast archive of Flickr image titles. Each poem emerges as the code seeks out hidden connections pairing and rearranging captions, letting the words of countless strangers reshape and reimagine new stories. In this evolving landscape, every poem becomes a reflection of digital memory and collective authorship, inviting us to rediscover the unseen poetry scattered across the web.
-  </p>
+    <div class="gallery" data-gallery>
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/images/m6wlbImg2.jpeg"
+          data-description="Steel supports framing the LED poem array.">
+          <img src="assets/images/m6wlbImg2.jpeg" alt="LED panels suspended between steel poles">
+        </button>
+        <figcaption>Installation detail</figcaption>
+      </figure>
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/images/m6wlb_img2.JPG"
+          data-description="Matrix panels mid-cycle, surfacing recombined Flickr titles.">
+          <img src="assets/images/m6wlb_img2.JPG" alt="LED panels in a darkened room mid-animation">
+        </button>
+        <figcaption>Panels mid-animation</figcaption>
+      </figure>
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/Memory6/JPG/Memory6-1.jpg"
+          data-description="Matrix panels mid-cycle, surfacing recombined Flickr titles.">
+          <img src="assets/Memory6/WEBP/Memory6-1.webp" alt="LED panels in a darkened room mid-animation">
+        </button>
+        <figcaption>Power supplies and wiring</figcaption>
+      </figure>
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/Memory6/JPG/Memory6-2.jpg"
+          data-description="Matrix panels mid-cycle, surfacing recombined Flickr titles.">
+          <img src="assets/Memory6/WEBP/Memory6-2.webp" alt="LED panels in a darkened room mid-animation">
+        </button>
+        <figcaption>Panels mid-animation</figcaption>
+      </figure>
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/Memory6/JPG/Memory6-3.jpg"
+          data-description="Matrix panels mid-cycle, surfacing recombined Flickr titles.">
+          <img src="assets/Memory6/WEBP/Memory6-3.webp" alt="LED panels in a darkened room mid-animation">
+        </button>
+        <figcaption>Closeup</figcaption>
+      </figure>
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/Memory6/JPG/Memory6-5.jpg"
+          data-description="Matrix panels mid-cycle, surfacing recombined Flickr titles.">
+          <img src="assets/Memory6/WEBP/Memory6-5.webp" alt="LED panels in a darkened room mid-animation">
+        </button>
+        <figcaption>Mounted panels</figcaption>
+      </figure>
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb" data-full="assets/Memory6/JPG/Memory6-6.jpg"
+          data-description="Matrix panels mid-cycle, surfacing recombined Flickr titles.">
+          <img src="assets/Memory6/WEBP/Memory6-6.webp" alt="LED panels in a darkened room mid-animation">
+        </button>
+        <figcaption>Poem lines been choosen</figcaption>
+      </figure>
 
-  <img src="assets/images/m6wlbImg2.jpeg"
-      alt="room with metal poles and a LED panels littup">
-  <img src="assets/images/m6wlb_img2.JPG"
-      alt="room with metal poles and a LED panels littup">
-    
-</div>
+    </div>
+
+  </div>
 
 </body>
+
 </html>
