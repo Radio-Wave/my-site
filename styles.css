@@ -576,7 +576,7 @@ nav a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2rem;
+  gap: 1.5rem;
   padding: 2rem;
   background: radial-gradient(circle at center, rgba(92, 90, 84, 0.45), rgba(10, 10, 10, 0.92));
   opacity: 0;
@@ -591,7 +591,8 @@ nav a:hover {
 }
 
 .lightbox-figure {
-  max-width: min(900px, 90vw);
+  width: auto;
+  max-width: min(900px, 92vw);
   max-height: 85vh;
   display: flex;
   flex-direction: column;
@@ -601,9 +602,11 @@ nav a:hover {
 }
 
 .lightbox-image {
-  width: 100%;
+  width: auto;
   height: auto;
-  max-height: 70vh;
+  max-height: 72vh;
+  object-fit: contain;
+  max-width: min(900px, 92vw);
   box-shadow:
     0 0 18px rgba(233, 231, 219, 0.25),
     0 0 50px rgba(233, 231, 219, 0.2);
@@ -707,5 +710,48 @@ body.no-scroll {
 
   .project-meta {
     grid-template-columns: 1fr;
+  }
+
+  /* Lightbox: make fullscreen images actually fill mobile screens */
+  .lightbox {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .lightbox-figure {
+    width: auto;
+    max-width: 100%;
+    max-height: none;
+  }
+
+  .lightbox-image {
+    width: auto;
+    max-width: 100%;
+    max-height: 78vh;
+  }
+
+  .lightbox-prev,
+  .lightbox-next {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 42px;
+    height: 42px;
+    font-size: 1.8rem;
+    background: rgba(12, 12, 12, 0.55);
+  }
+
+  .lightbox-prev {
+    left: 10px;
+  }
+
+  .lightbox-next {
+    right: 10px;
+  }
+
+  .lightbox-close {
+    top: 12px;
+    right: 12px;
+    font-size: 2rem;
   }
 }
