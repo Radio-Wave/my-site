@@ -249,7 +249,9 @@ nav a:hover {
 .content {
   margin-left: 280px;
   padding: 20px;
-  max-width: 800px;
+  /* Let project pages breathe instead of sitting in a narrow column */
+  width: calc(100vw - 320px);
+  max-width: 1400px;
 }
 
 .content b {
@@ -263,7 +265,8 @@ nav a:hover {
 }
 
 .project-content {
-  max-width: 960px;
+  max-width: none;
+  width: 100%;
   padding: 60px 40px 120px;
 }
 
@@ -346,21 +349,22 @@ nav a:hover {
 
 .about-contact {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-  padding: 1.5rem 0 2rem;
-  border-top: 1px solid rgba(233, 231, 219, 0.2);
-  border-bottom: 1px solid rgba(233, 231, 219, 0.2);
-  margin-bottom: 2.5rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+  padding: 1rem 0 1.25rem;
+  border-top: 1px solid rgba(233, 231, 219, 0.18);
+  border-bottom: 1px solid rgba(233, 231, 219, 0.18);
+  margin-bottom: 2rem;
+  align-items: start;
 }
 
 .about-contact .label {
   display: block;
   text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.4em;
+  font-size: 0.68rem;
+  letter-spacing: 0.32em;
   color: rgba(233, 231, 219, 0.55);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.12rem;
 }
 
 .project-meta {
@@ -419,6 +423,7 @@ nav a:hover {
   color: #e9e7db;
   text-decoration: none;
   font-weight: 500;
+  font-size: 0.95rem;
 }
 
 .about-contact p {
@@ -723,6 +728,7 @@ body.no-scroll {
   /* Remove left margin on content so it’s full-width */
   .content {
     margin-left: 0;
+    width: auto;
   }
 
   .about-content {
@@ -730,6 +736,7 @@ body.no-scroll {
   }
 
   .project-content {
+    width: 100%;
     padding: 40px 18px 80px;
   }
 
