@@ -3,26 +3,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const sidebar = document.querySelector('.sidebar');
   const lightbox = ensureLightbox();
 
-  // 1. Load the nav.html into your sidebar
   if (sidebar) {
     fetch('nav.html')
-      .then(res => {
-        if (!res.ok) throw new Error('Couldn’t load nav.html');
-        return res.text();
-      })
-      .then(html => {
-        sidebar.innerHTML = html;
-      })
-      .catch(err => {
-        console.error('Error loading navigation:', err);
-        sidebar.innerHTML = '<p>Navigation failed to load.</p>';
-      });
+      .then(r => r.text())
+      .then(html => { sidebar.innerHTML = html; });
   }
 
-  // 2. Wire up your existing toggle
   if (menuBtn && sidebar) {
     menuBtn.addEventListener('click', () => {
-      sidebar.classList.toggle('sidebar-open');
+      const isOpen = sidebar.classList.toggle('sidebar-open');
+      menuBtn.setAttribute('aria-expanded', isOpen);
     });
   }
 
@@ -36,14 +26,14 @@ function ensureLightbox() {
   const lightbox = document.createElement('div');
   lightbox.className = 'lightbox';
   lightbox.setAttribute('data-lightbox', '');
-  lightbox.setAttribute('aria-hidden', 'true');
+  lightbox.setAttribute('aria-hidden', true);
 
   lightbox.innerHTML = `
     <button type="button" class="lightbox-button lightbox-close" aria-label="Close gallery">&times;</button>
     <button type="button" class="lightbox-button lightbox-prev" aria-label="Previous image">&#8249;</button>
     <figure class="lightbox-figure">
       <img class="lightbox-image" src="" alt="">
-      <figcaption class="lightbox-description"></figcaption>
+      <figcaption class="lightbox-description" aria-live="polite"></figcaption>
     </figure>
     <button type="button" class="lightbox-button lightbox-next" aria-label="Next image">&#8250;</button>
   `;
@@ -64,7 +54,8 @@ function initialiseGallery(lightbox) {
 
   let activeGalleryButtons = [];
   let activeIndex = 0;
-  let isOpen = false;
+
+  const isOpen = () => lightbox.classList.contains('lightbox-open');
 
   const updateLightbox = () => {
     const button = activeGalleryButtons[activeIndex];
@@ -79,19 +70,17 @@ function initialiseGallery(lightbox) {
     descriptionEl.textContent = description;
 
     lightbox.classList.add('lightbox-open');
-    lightbox.setAttribute('aria-hidden', 'false');
+    lightbox.setAttribute('aria-hidden', false);
     document.body.classList.add('no-scroll');
-    isOpen = true;
   };
 
   const closeLightbox = () => {
     lightbox.classList.remove('lightbox-open');
-    lightbox.setAttribute('aria-hidden', 'true');
+    lightbox.setAttribute('aria-hidden', true);
     document.body.classList.remove('no-scroll');
     imageEl.src = '';
     imageEl.alt = '';
     descriptionEl.textContent = '';
-    isOpen = false;
   };
 
   const showPrev = () => {
@@ -120,26 +109,28 @@ function initialiseGallery(lightbox) {
   nextBtn?.addEventListener('click', showNext);
 
   lightbox.addEventListener('click', event => {
-    if (event.target === lightbox) {
-      closeLightbox();
-    }
+    if (event.target === lightbox) closeLightbox();
   });
 
-  document.addEventListener('keydown', event => {
-    if (!isOpen) return;
+  let touchStartX = 0;
+  lightbox.addEventListener('touchstart', event => {
+    touchStartX = event.changedTouches[0].clientX;
+  }, { passive: true });
 
+  lightbox.addEventListener('touchend', event => {
+    if (!isOpen()) return;
+    const delta = event.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(delta) < 40) return;
+    if (delta < 0) showNext();
+    else showPrev();
+  }, { passive: true });
+
+  document.addEventListener('keydown', event => {
+    if (!isOpen()) return;
     switch (event.key) {
-      case 'Escape':
-        closeLightbox();
-        break;
-      case 'ArrowLeft':
-        showPrev();
-        break;
-      case 'ArrowRight':
-        showNext();
-        break;
-      default:
-        break;
+      case 'Escape':    closeLightbox(); break;
+      case 'ArrowLeft': showPrev();      break;
+      case 'ArrowRight': showNext();     break;
     }
   });
 }

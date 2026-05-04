@@ -203,28 +203,13 @@ nav a:hover {
   justify-content: center;
   align-items: flex-start;
   gap: 1rem;
-  background: rgba(10, 10, 10, 0.78);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: #151515;
   z-index: 900;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
   overflow: hidden;
-  isolation: isolate;
 
   /* Transition for sliding in/out on mobile */
   transform: translateX(0);
   transition: transform 0.3s ease-in-out;
-}
-
-.sidebar::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  width: 12px;
-  margin-left: auto;
-  background: linear-gradient(90deg, rgba(10, 10, 10, 0.75) 0%, rgba(10, 10, 10, 0.35) 55%, rgba(10, 10, 10, 0) 100%);
-  pointer-events: none;
-  mix-blend-mode: normal;
 }
 
 .sidebar nav {
@@ -710,14 +695,9 @@ body.no-scroll {
   /* Hide sidebar off-screen by default */
   .sidebar {
     transform: translateX(-100%);
-    width: 200px; /* optional: narrower on mobile */
+    width: 200px;
     height: 100vh;
-    background: rgba(10, 10, 10, 0.82);
-  }
-
-  .sidebar::after {
-    width: 9px;
-    background: linear-gradient(90deg, rgba(10, 10, 10, 0.8) 0%, rgba(10, 10, 10, 0.42) 55%, rgba(10, 10, 10, 0) 100%);
+    background: #151515;
   }
 
   /* Slide in when "open" class is toggled */
@@ -789,5 +769,25 @@ body.no-scroll {
     top: 12px;
     right: 12px;
     font-size: 2rem;
+  }
+}
+
+/* =========================================
+   Reduced Motion
+========================================= */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .gallery-thumb,
+  .gallery-thumb img,
+  .lightbox,
+  .lightbox-button {
+    transition: none;
+  }
+
+  .gallery-thumb:hover img,
+  .gallery-thumb:focus-visible img,
+  .lightbox-button:hover,
+  .lightbox-button:focus-visible {
+    transform: none;
   }
 }
