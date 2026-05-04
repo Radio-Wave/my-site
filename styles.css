@@ -536,8 +536,11 @@ nav a:hover {
   padding: 0;
   background: none;
   cursor: pointer;
-  transition: transform 0.3s ease;
   width: 100%;
+  box-shadow:
+    0 0 8px rgba(233, 231, 219, 0.15),
+    0 0 16px rgba(233, 231, 219, 0.2);
+  transition: box-shadow 0.35s ease, filter 0.35s ease;
 }
 
 .gallery-thumb:focus-visible {
@@ -545,21 +548,19 @@ nav a:hover {
   outline-offset: 4px;
 }
 
-.gallery-thumb img {
-  width: 100%;
-  margin: 0;
+.gallery-thumb:hover,
+.gallery-thumb:focus-visible {
   box-shadow:
-    0 0 8px rgba(233, 231, 219, 0.15),
-    0 0 16px rgba(233, 231, 219, 0.25);
-  transition: transform 0.35s ease, box-shadow 0.35s ease;
+    0 0 0 2px rgba(233, 231, 219, 0.18),
+    0 0 14px rgba(233, 231, 219, 0.4),
+    0 0 32px rgba(233, 231, 219, 0.22);
+  filter: brightness(1.1);
 }
 
-.gallery-thumb:hover img,
-.gallery-thumb:focus-visible img {
-  transform: translateY(-4px);
-  box-shadow:
-    0 0 12px rgba(233, 231, 219, 0.35),
-    0 0 30px rgba(233, 231, 219, 0.25);
+.gallery-thumb img {
+  width: 100%;
+  display: block;
+  margin: 0;
 }
 
 .gallery-item figcaption {
@@ -778,14 +779,11 @@ body.no-scroll {
 @media (prefers-reduced-motion: reduce) {
   .sidebar,
   .gallery-thumb,
-  .gallery-thumb img,
   .lightbox,
   .lightbox-button {
     transition: none;
   }
 
-  .gallery-thumb:hover img,
-  .gallery-thumb:focus-visible img,
   .lightbox-button:hover,
   .lightbox-button:focus-visible {
     transform: none;
