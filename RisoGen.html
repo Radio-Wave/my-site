@@ -6,18 +6,15 @@
 <title>RisoGen — generative two-color composer</title>
 <style>
   :root{
-    --bg:#0c0c0c;
-    --panel:#161616;
-    --ink:#e8e6df;
-    --muted:#7a7a7a;
-    --accent:#ff5a3c;
+    --bg:#0c0c0c; --panel:#161616; --ink:#e8e6df;
+    --muted:#7a7a7a; --accent:#ff5a3c;
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
     font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
-  .app{display:grid;grid-template-columns:280px 1fr;height:100vh}
+  .app{display:grid;grid-template-columns:300px 1fr;height:100vh}
   .panel{background:var(--panel);border-right:1px solid #000;padding:14px;overflow:auto}
-  .panel h1{font-size:13px;letter-spacing:.15em;text-transform:uppercase;margin:0 0 4px;color:var(--ink)}
+  .panel h1{font-size:13px;letter-spacing:.15em;text-transform:uppercase;margin:0 0 4px}
   .panel .sub{color:var(--muted);margin-bottom:14px;font-size:11px;line-height:1.4}
   .group{border-top:1px solid #000;padding:12px 0;margin-top:4px}
   .group:first-of-type{border-top:none;padding-top:0}
@@ -28,9 +25,11 @@
   .group input[type=range]{width:140px;accent-color:var(--accent)}
   .group input[type=text],.group input[type=number]{
     background:#0e0e0e;border:1px solid #2a2a2a;color:var(--ink);
-    font-family:inherit;font-size:11px;padding:4px 6px;width:100px}
+    font-family:inherit;font-size:11px;padding:4px 6px;width:120px}
   .group select{background:#0e0e0e;border:1px solid #2a2a2a;color:var(--ink);
     font-family:inherit;font-size:11px;padding:5px 6px;width:100%}
+  .group textarea{background:#0e0e0e;border:1px solid #2a2a2a;color:var(--ink);
+    font-family:inherit;font-size:11px;padding:6px;width:100%;height:60px;resize:vertical}
   .btn-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
   button{background:var(--accent);color:#111;border:none;cursor:pointer;
     font-family:inherit;font-size:11px;letter-spacing:.05em;
@@ -42,14 +41,18 @@
   .swatch{width:28px;height:28px;border:1px solid #000;cursor:pointer;position:relative}
   .swatch input{position:absolute;inset:0;opacity:0;cursor:pointer}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px}
-  .check{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:11px}
-  .check input{accent-color:var(--accent)}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px 6px}
+  .check{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .check input{accent-color:var(--accent);flex:none}
   .preset-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
   .preset{background:#0e0e0e;border:1px solid #2a2a2a;color:var(--ink);
     padding:8px 6px;cursor:pointer;text-align:center;font-size:10px;
     letter-spacing:.1em;text-transform:uppercase}
   .preset:hover{border-color:var(--accent)}
   .preset.active{background:var(--accent);color:#111;border-color:var(--accent)}
+  .cat-ttl{font-size:9px;letter-spacing:.15em;text-transform:uppercase;
+    color:var(--muted);margin:10px 0 4px;padding-bottom:2px;border-bottom:1px solid #2a2a2a}
+  .cat-ttl:first-child{margin-top:0}
   .stage{display:flex;align-items:center;justify-content:center;
     padding:24px;overflow:auto;background:
       repeating-linear-gradient(45deg,#141414 0 2px,#0e0e0e 2px 6px)}
@@ -65,7 +68,7 @@
 
   <aside class="panel">
     <h1>RisoGen</h1>
-    <div class="sub">Seeded composer for print, CRT, HUD, and Swiss-grid visuals.</div>
+    <div class="sub">Seeded composer for print, CRT, HUD, diagram, blueprint, and Swiss-grid visuals.</div>
 
     <div class="group">
       <div class="ttl">Preset</div>
@@ -74,6 +77,10 @@
         <div class="preset" data-p="crt">CRT</div>
         <div class="preset" data-p="hud">HUD</div>
         <div class="preset" data-p="swiss">Swiss</div>
+        <div class="preset" data-p="diagram">Diagram</div>
+        <div class="preset" data-p="cyber">Cyber</div>
+        <div class="preset" data-p="blueprint">Blueprint</div>
+        <div class="preset" data-p="poster">Poster</div>
       </div>
     </div>
 
@@ -92,7 +99,7 @@
       <label>Height <span class="v" id="hv">2200</span>
         <input id="h" type="range" min="600" max="3200" step="20" value="2200"></label>
       <label>Modules <span class="v" id="nv">9</span>
-        <input id="n" type="range" min="3" max="20" value="9"></label>
+        <input id="n" type="range" min="1" max="24" value="9"></label>
       <label>Grain <span class="v" id="gv">22</span>
         <input id="g" type="range" min="0" max="80" value="22"></label>
       <label>Misregister <span class="v" id="mv">3</span>
@@ -112,12 +119,34 @@
           <option value="rect">rectangular regions</option>
           <option value="free">free-floating</option>
           <option value="single">single full-bleed</option>
+          <option value="grid">poster grid (rows×cols)</option>
         </select>
+      </label>
+      <label>Grid rows <span class="v" id="grv">2</span>
+        <input id="gr" type="range" min="1" max="8" value="2"></label>
+      <label>Grid cols <span class="v" id="gcv">3</span>
+        <input id="gc" type="range" min="1" max="8" value="3"></label>
+      <label>Crop marks
+        <input type="checkbox" id="crop">
       </label>
     </div>
 
     <div class="group">
       <div class="ttl">Palette</div>
+      <label>Library
+        <select id="palLib">
+          <option value="">— custom —</option>
+          <option value="risoclassic">Riso classic (coral/teal)</option>
+          <option value="amber">Amber CRT</option>
+          <option value="blueprint">Blueprint</option>
+          <option value="newsprint">Newsprint</option>
+          <option value="hotcold">Hot/Cold HUD</option>
+          <option value="monoink">Mono ink</option>
+          <option value="mint">Mint riso</option>
+          <option value="violet">Violet dusk</option>
+          <option value="electric">Electric jade</option>
+        </select>
+      </label>
       <label>Ink A
         <span class="swatches"><span class="swatch" style="background:#ff5a3c">
           <input type="color" id="cA" value="#ff5a3c"></span></span>
@@ -133,24 +162,80 @@
     </div>
 
     <div class="group">
+      <div class="ttl">Text source</div>
+      <label>Corpus
+        <select id="corpus">
+          <option value="swiss">Swiss/German (raster, feld…)</option>
+          <option value="hex">Hex codes (D6, B8…)</option>
+          <option value="tech">Tech (TURB ST-V…)</option>
+          <option value="numbers">Numbers</option>
+          <option value="poetic">Poetic (signal, horizon…)</option>
+          <option value="constellation">Constellations</option>
+          <option value="mixed">Mixed</option>
+          <option value="custom">Custom (below)</option>
+        </select>
+      </label>
+      <textarea id="customText" placeholder="One word/value per line — used when corpus is Custom"></textarea>
+    </div>
+
+    <div class="group">
       <div class="ttl">Modules</div>
-      <div class="grid2">
+
+      <div class="cat-ttl">Print grids</div>
+      <div class="grid3">
         <div class="check"><input type="checkbox" id="mHex"  checked> hex</div>
-        <div class="check"><input type="checkbox" id="mTri"  checked> triangles</div>
-        <div class="check"><input type="checkbox" id="mSq"   checked> square grid</div>
-        <div class="check"><input type="checkbox" id="mMesh" checked> warped mesh</div>
-        <div class="check"><input type="checkbox" id="mPix"  checked> pixel blob</div>
+        <div class="check"><input type="checkbox" id="mTri"  checked> tri</div>
+        <div class="check"><input type="checkbox" id="mSq"   checked> sq grid</div>
+        <div class="check"><input type="checkbox" id="mMesh" checked> mesh</div>
+        <div class="check"><input type="checkbox" id="mPix"  checked> pixblob</div>
         <div class="check"><input type="checkbox" id="mNet"  checked> network</div>
-        <div class="check"><input type="checkbox" id="mTab"  checked> num. table</div>
+        <div class="check"><input type="checkbox" id="mTab"  checked> table</div>
         <div class="check"><input type="checkbox" id="mTyp"  checked> caption</div>
-        <div class="check"><input type="checkbox" id="mOsc"> oscilloscope</div>
+        <div class="check"><input type="checkbox" id="mHead"> header</div>
+      </div>
+
+      <div class="cat-ttl">Diagram (image 1)</div>
+      <div class="grid3">
+        <div class="check"><input type="checkbox" id="mDgVec"> vec field</div>
+        <div class="check"><input type="checkbox" id="mDgLis"> lissajous</div>
+        <div class="check"><input type="checkbox" id="mDgCage"> cage</div>
+        <div class="check"><input type="checkbox" id="mDgFun"> funnel</div>
+        <div class="check"><input type="checkbox" id="mDgHel"> helix</div>
+        <div class="check"><input type="checkbox" id="mDgHour"> hourgl.</div>
+        <div class="check"><input type="checkbox" id="mCube"> 3D cube</div>
+      </div>
+
+      <div class="cat-ttl">Data (image 2)</div>
+      <div class="grid3">
+        <div class="check"><input type="checkbox" id="mState"> stategraph</div>
+        <div class="check"><input type="checkbox" id="mStep"> stepchart</div>
+        <div class="check"><input type="checkbox" id="mPhase"> phasewave</div>
+        <div class="check"><input type="checkbox" id="mLabel"> hud label</div>
+        <div class="check"><input type="checkbox" id="mOsc"> osc.scope</div>
+        <div class="check"><input type="checkbox" id="mRings"> rings</div>
+      </div>
+
+      <div class="cat-ttl">Texture (image 3)</div>
+      <div class="grid3">
         <div class="check"><input type="checkbox" id="mParts"> particles</div>
         <div class="check"><input type="checkbox" id="mStream"> streams</div>
-        <div class="check"><input type="checkbox" id="mLabel"> data labels</div>
-        <div class="check"><input type="checkbox" id="mCube"> perspective</div>
-        <div class="check"><input type="checkbox" id="mHead"> swiss header</div>
-        <div class="check"><input type="checkbox" id="mRings"> rings/orbits</div>
-        <div class="check"><input type="checkbox" id="mFlow"> flow field</div>
+        <div class="check"><input type="checkbox" id="mFlow"> flow</div>
+        <div class="check"><input type="checkbox" id="mStars"> stars</div>
+        <div class="check"><input type="checkbox" id="mStrAr"> stringart</div>
+        <div class="check"><input type="checkbox" id="mDot"> dot orbit</div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="ttl">Solo module</div>
+      <label>Module
+        <select id="solo">
+          <option value="">— none —</option>
+        </select>
+      </label>
+      <div class="btn-row">
+        <button id="soloDraw" class="alt">Preview solo</button>
+        <button id="soloExport">Export solo PNG</button>
       </div>
     </div>
 
@@ -160,7 +245,7 @@
         <button id="exportHi" class="alt">PNG @2x</button>
       </div>
       <div class="foot">
-        <kbd>Space</kbd> regenerate · <kbd>S</kbd> random seed · <kbd>E</kbd> export · <kbd>1-4</kbd> presets
+        <kbd>Space</kbd> regen · <kbd>S</kbd> seed · <kbd>E</kbd> export · <kbd>1-8</kbd> presets
       </div>
     </div>
   </aside>
@@ -196,82 +281,163 @@ const $=id=>document.getElementById(id);
 const ui={
   seed:$('seed'),
   w:$('w'),h:$('h'),n:$('n'),g:$('g'),m:$('m'),gl:$('gl'),
+  gr:$('gr'),gc:$('gc'),crop:$('crop'),
   blend:$('blend'),layout:$('layout'),
-  cA:$('cA'),cB:$('cB'),cP:$('cP'),
+  cA:$('cA'),cB:$('cB'),cP:$('cP'),palLib:$('palLib'),
+  corpus:$('corpus'),customText:$('customText'),
+  solo:$('solo'),
   modules:{
     hex:$('mHex'),tri:$('mTri'),sq:$('mSq'),mesh:$('mMesh'),
-    pix:$('mPix'),net:$('mNet'),tab:$('mTab'),typ:$('mTyp'),
-    osc:$('mOsc'),parts:$('mParts'),stream:$('mStream'),
-    label:$('mLabel'),cube:$('mCube'),head:$('mHead'),
-    rings:$('mRings'),flow:$('mFlow')}
+    pix:$('mPix'),net:$('mNet'),tab:$('mTab'),typ:$('mTyp'),head:$('mHead'),
+    dgvec:$('mDgVec'),dglis:$('mDgLis'),dgcage:$('mDgCage'),
+    dgfun:$('mDgFun'),dghel:$('mDgHel'),dghour:$('mDgHour'),cube:$('mCube'),
+    state:$('mState'),step:$('mStep'),phase:$('mPhase'),
+    label:$('mLabel'),osc:$('mOsc'),rings:$('mRings'),
+    parts:$('mParts'),stream:$('mStream'),flow:$('mFlow'),
+    stars:$('mStars'),strar:$('mStrAr'),dot:$('mDot')}
 };
 
-['w','h','n','g','m','gl'].forEach(k=>{
+const MODULE_LABELS={
+  hex:'hex',tri:'triangles',sq:'square grid',mesh:'warped mesh',
+  pix:'pixel blob',net:'network',tab:'number table',typ:'caption',head:'swiss header',
+  dgvec:'diagram: vector field',dglis:'diagram: lissajous',
+  dgcage:'diagram: cage',dgfun:'diagram: funnel',
+  dghel:'diagram: helix',dghour:'diagram: hourglass',cube:'3D cube',
+  state:'state graph',step:'step chart',phase:'phase waves',
+  label:'HUD label',osc:'oscilloscope',rings:'rings/orbits',
+  parts:'particles',stream:'curve streams',flow:'flow field',
+  stars:'star field',strar:'string art',dot:'dotted orbit'};
+
+/* populate solo selector */
+(function(){const sel=ui.solo;
+  for(const k of Object.keys(MODULE_LABELS)){
+    const o=document.createElement('option');o.value=k;o.textContent=MODULE_LABELS[k];
+    sel.appendChild(o)}})();
+
+/* wire inputs */
+['w','h','n','g','m','gl','gr','gc'].forEach(k=>{
   const out=$(k+'v');
   ui[k].addEventListener('input',()=>{out.textContent=ui[k].value;draw()})});
-[ui.cA,ui.cB,ui.cP,ui.blend,ui.layout].forEach(el=>el.addEventListener('input',draw));
+[ui.cA,ui.cB,ui.cP,ui.blend,ui.layout,ui.corpus,ui.crop].forEach(el=>el.addEventListener('input',draw));
+ui.customText.addEventListener('input',draw);
 Object.values(ui.modules).forEach(el=>el.addEventListener('change',draw));
 ui.seed.addEventListener('change',draw);
 $('regen').onclick=draw;
 $('random').onclick=()=>{ui.seed.value='r-'+Math.random().toString(36).slice(2,8);draw()};
 $('export').onclick=()=>exportPNG(1);
 $('exportHi').onclick=()=>exportPNG(2);
+$('soloDraw').onclick=()=>drawSolo(false);
+$('soloExport').onclick=()=>drawSolo(true);
 
-/* ---------- presets ---------- */
+/* ---------- palette library ---------- */
+const PALETTES={
+  risoclassic:['#ff5a3c','#2bbf94','#f4efe6'],
+  amber:     ['#ffb000','#ff5b3a','#050505'],
+  blueprint: ['#e8eef7','#7fb3ff','#101a2c'],
+  newsprint: ['#1a1a1a','#c4302b','#f0e8d8'],
+  hotcold:   ['#ff3a4f','#5ad7ff','#070707'],
+  monoink:   ['#0a0a0a','#0a0a0a','#efeae0'],
+  mint:      ['#e94f4f','#7bcfb4','#fbf5e8'],
+  violet:    ['#ff5cb1','#7d5cff','#0a0816'],
+  electric:  ['#caff3a','#3affd5','#0a0a0a']
+};
+ui.palLib.addEventListener('change',()=>{
+  const v=ui.palLib.value;if(!v)return;
+  const p=PALETTES[v];
+  ui.cA.value=p[0];ui.cB.value=p[1];ui.cP.value=p[2];
+  document.querySelectorAll('.swatch').forEach((s,i)=>s.style.background=p[i]);
+  draw();
+});
+
+/* ---------- mode presets ---------- */
 const PRESETS={
-  riso:{
-    cA:'#ff5a3c',cB:'#2bbf94',cP:'#f4efe6',
-    blend:'multiply',glow:0,grain:22,misreg:3,layout:'rect',n:9,
+  riso:{cA:'#ff5a3c',cB:'#2bbf94',cP:'#f4efe6',blend:'multiply',glow:0,grain:22,
+    misreg:3,layout:'rect',n:9,gr:2,gc:3,crop:false,corpus:'swiss',
     mods:['hex','tri','sq','mesh','pix','net','tab','typ']},
-  crt:{
-    cA:'#ff2a2a',cB:'#ff5b3a',cP:'#050505',
-    blend:'lighter',glow:14,grain:14,misreg:1,layout:'single',n:1,
+  crt:{cA:'#ff2a2a',cB:'#ff5b3a',cP:'#050505',blend:'lighter',glow:14,grain:14,
+    misreg:1,layout:'single',n:1,gr:1,gc:1,crop:false,corpus:'numbers',
     mods:['osc']},
-  hud:{
-    cA:'#ff3a4f',cB:'#5ad7ff',cP:'#070707',
-    blend:'lighter',glow:8,grain:10,misreg:1,layout:'free',n:12,
+  hud:{cA:'#ff3a4f',cB:'#5ad7ff',cP:'#070707',blend:'lighter',glow:8,grain:10,
+    misreg:1,layout:'free',n:12,gr:3,gc:2,crop:false,corpus:'tech',
     mods:['parts','stream','label','rings','flow','net']},
-  swiss:{
-    cA:'#1a1a1a',cB:'#1a1a1a',cP:'#efeae0',
-    blend:'multiply',glow:0,grain:30,misreg:0,layout:'rect',n:5,
-    mods:['head','cube','typ','sq','tab']}
+  swiss:{cA:'#1a1a1a',cB:'#1a1a1a',cP:'#efeae0',blend:'multiply',glow:0,grain:30,
+    misreg:0,layout:'rect',n:5,gr:3,gc:2,crop:true,corpus:'swiss',
+    mods:['head','cube','typ','sq','tab']},
+  diagram:{cA:'#ff4a3a',cB:'#ffffff',cP:'#0b0b0b',blend:'lighter',glow:0,grain:10,
+    misreg:0,layout:'grid',n:6,gr:2,gc:3,crop:false,corpus:'poetic',
+    mods:['dgvec','dglis','dgcage','dgfun','dghel','dghour']},
+  cyber:{cA:'#ffb000',cB:'#ffb000',cP:'#050505',blend:'lighter',glow:6,grain:8,
+    misreg:0,layout:'grid',n:3,gr:3,gc:1,crop:false,corpus:'hex',
+    mods:['state','step','phase']},
+  blueprint:{cA:'#e8eef7',cB:'#cfd8e8',cP:'#1a1410',blend:'lighter',glow:2,grain:35,
+    misreg:0,layout:'free',n:8,gr:2,gc:2,crop:true,corpus:'constellation',
+    mods:['stars','strar','dot','sq','rings']},
+  poster:{cA:'#ff5a3c',cB:'#2bbf94',cP:'#f4efe6',blend:'multiply',glow:0,grain:20,
+    misreg:2,layout:'grid',n:9,gr:3,gc:3,crop:true,corpus:'mixed',
+    mods:['hex','tri','mesh','pix','net','tab','dglis','dgfun','rings']}
 };
 function applyPreset(name){
   const p=PRESETS[name];if(!p)return;
   ui.cA.value=p.cA;ui.cB.value=p.cB;ui.cP.value=p.cP;
-  document.querySelectorAll('.swatch').forEach((s,i)=>{
-    s.style.background=[p.cA,p.cB,p.cP][i]});
-  ui.blend.value=p.blend;ui.gl.value=p.glow;$('glv').textContent=p.glow;
+  document.querySelectorAll('.swatch').forEach((s,i)=>
+    s.style.background=[p.cA,p.cB,p.cP][i]);
+  ui.blend.value=p.blend;
+  ui.gl.value=p.glow;$('glv').textContent=p.glow;
   ui.g.value=p.grain;$('gv').textContent=p.grain;
   ui.m.value=p.misreg;$('mv').textContent=p.misreg;
-  ui.layout.value=p.layout;ui.n.value=p.n;$('nv').textContent=p.n;
+  ui.layout.value=p.layout;
+  ui.n.value=p.n;$('nv').textContent=p.n;
+  ui.gr.value=p.gr;$('grv').textContent=p.gr;
+  ui.gc.value=p.gc;$('gcv').textContent=p.gc;
+  ui.crop.checked=p.crop;
+  ui.corpus.value=p.corpus;
   Object.entries(ui.modules).forEach(([k,el])=>el.checked=p.mods.includes(k));
   document.querySelectorAll('.preset').forEach(el=>
     el.classList.toggle('active',el.dataset.p===name));
   draw();
 }
-document.querySelectorAll('.preset').forEach(el=>{
-  el.addEventListener('click',()=>applyPreset(el.dataset.p))});
+document.querySelectorAll('.preset').forEach(el=>
+  el.addEventListener('click',()=>applyPreset(el.dataset.p)));
 
 window.addEventListener('keydown',e=>{
   if(e.target.matches('input,textarea,select'))return;
   if(e.code==='Space'){e.preventDefault();draw()}
   if(e.key==='s'||e.key==='S'){ui.seed.value='r-'+Math.random().toString(36).slice(2,8);draw()}
   if(e.key==='e'||e.key==='E'){exportPNG(1)}
-  if(e.key==='1')applyPreset('riso');
-  if(e.key==='2')applyPreset('crt');
-  if(e.key==='3')applyPreset('hud');
-  if(e.key==='4')applyPreset('swiss');
+  const presets=['riso','crt','hud','swiss','diagram','cyber','blueprint','poster'];
+  const idx=parseInt(e.key);if(idx>=1&&idx<=8)applyPreset(presets[idx-1]);
 });
 
 /* ---------- color helpers ---------- */
 function hexToRgb(hex){const n=parseInt(hex.slice(1),16);
   return [(n>>16)&255,(n>>8)&255,n&255]}
 function rgba(rgb,a){return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`}
-function isDarkPaper(){const [r,g,b]=hexToRgb(ui.cP.value);
-  return (r*299+g*587+b*114)/1000<70}
+function strokeInk(rgb,a=1,lw=1){
+  ctx.strokeStyle=rgba(rgb,a);ctx.lineWidth=lw;ctx.lineCap='round';ctx.lineJoin='round'}
+function fillInk(rgb,a=1){ctx.fillStyle=rgba(rgb,a)}
 
-/* ---------- layout ---------- */
+/* ---------- text corpora ---------- */
+const CORPORA={
+  swiss:['raster','feld','muster','grund','linie','flache','punkt','achse','kante','knoten','dichte','strich','satz','typ'],
+  hex:['D6','B8','9B-0C','F4','6C','2A','4E','71','85','A3','C9','1F','7B','3E','5D','08','FC'],
+  tech:['TURB ST-V','R-RADI','DIST AVG','FLUX-Q','RHO·V','THETA-R','DELTA-N','OMEGA','SIGMA-Z','ZETA'],
+  numbers:['390','568','854','408','228','40','120','46','30','24','142','60','6','16','32'],
+  poetic:['silence','threshold','signal','horizon','remnant','echo','vapor','wake','pulse','ember','quiet','traces'],
+  constellation:['LYRA','VEGA','SIRIUS','ORION','CYGNUS','DRACO','LEO','CARINA','PUPPIS','VELA','PYXIS','VIRGO'],
+  mixed:[]
+};
+function corpus(){
+  const k=ui.corpus.value;
+  if(k==='custom'){
+    const lines=ui.customText.value.split(/\n/).map(s=>s.trim()).filter(Boolean);
+    return lines.length?lines:['custom'];
+  }
+  if(k==='mixed'){return [].concat(CORPORA.swiss,CORPORA.hex,CORPORA.tech,CORPORA.numbers)}
+  return CORPORA[k]||CORPORA.swiss;
+}
+const pickText=()=>pick(corpus());
+
+/* ---------- layout helpers ---------- */
 function pickRegion(W,H,occupied){
   for(let tries=0;tries<60;tries++){
     const cols=4,rows=Math.max(4,Math.round(H/W*4));
@@ -291,18 +457,21 @@ function pickRegion(W,H,occupied){
 function pickFree(W,H){
   const w=rnd(W*.15,W*.55);
   const h=rnd(H*.10,H*.35);
-  const x=rnd(0,W-w),y=rnd(0,H-h);
-  return {x,y,w,h};
+  return {x:rnd(0,W-w),y:rnd(0,H-h),w,h};
 }
 function fullRegion(W,H){return {x:0,y:0,w:W,h:H}}
 
-/* ---------- ink helpers ---------- */
-function strokeInk(rgb,a=1,lw=1){
-  ctx.strokeStyle=rgba(rgb,a);ctx.lineWidth=lw;ctx.lineCap='round';ctx.lineJoin='round'}
-function fillInk(rgb,a=1){ctx.fillStyle=rgba(rgb,a)}
+function gridRegions(W,H,rows,cols,pad){
+  const cw=(W-pad*(cols+1))/cols, ch=(H-pad*(rows+1))/rows;
+  const out=[];
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    out.push({x:pad+c*(cw+pad),y:pad+r*(ch+pad),w:cw,h:ch});
+  }
+  return out;
+}
 
 /* ============================================================
-   MODULES
+   ORIGINAL MODULES (print/grids)
 ============================================================ */
 
 function modHex(box,col){
@@ -314,8 +483,7 @@ function modHex(box,col){
     for(let x=box.x-r;x<box.x+box.w+r;x+=w){
       const ox=((Math.round((y-box.y)/h))%2)?w/2:0;
       hexPath(x+ox,y,r);ctx.stroke()}}
-  if(chance(.3)){
-    fillInk(ink,.85);
+  if(chance(.3)){fillInk(ink,.85);
     const fx=box.x+rnd(0,box.w*.6),fy=box.y+rnd(0,box.h*.6);
     const fw=rnd(box.w*.2,box.w*.5),fh=rnd(box.h*.15,box.h*.4);
     ctx.fillRect(fx,fy,fw,fh)}
@@ -335,16 +503,14 @@ function modTri(box,col){
   strokeInk(ink,.9,1);
   const h=s*Math.sqrt(3)/2;
   for(let y=box.y;y<box.y+box.h+h;y+=h){
-    const row=Math.round((y-box.y)/h);
-    const off=(row%2)?s/2:0;
+    const row=Math.round((y-box.y)/h),off=(row%2)?s/2:0;
     for(let x=box.x-s;x<box.x+box.w+s;x+=s){
       const xx=x+off;ctx.beginPath();
       if(row%2){ctx.moveTo(xx,y);ctx.lineTo(xx+s,y);ctx.lineTo(xx+s/2,y-h)}
       else{ctx.moveTo(xx,y);ctx.lineTo(xx+s,y);ctx.lineTo(xx+s/2,y+h)}
       ctx.closePath();ctx.stroke()}}
   const fills=rint(1,4);
-  for(let i=0;i<fills;i++){
-    fillInk(ink,.85);
+  for(let i=0;i<fills;i++){fillInk(ink,.85);
     const fx=box.x+rnd(0,box.w-s*2),fy=box.y+rnd(0,box.h-s*2);
     if(chance(.5))ctx.fillRect(fx,fy,s*rnd(1,2.5),s*rnd(.6,2));
     else{ctx.beginPath();ctx.moveTo(fx,fy);ctx.lineTo(fx+s,fy);ctx.lineTo(fx+s/2,fy+h);ctx.closePath();ctx.fill()}}
@@ -380,9 +546,8 @@ function modMesh(box,col){
     for(let i=0;i<=cols;i++){
       const u=i/cols,v=j/rows;
       let x=box.x+u*box.w,y=box.y+v*box.h;
-      const dy=(y-cy)/box.h;const ang=dy*twist*Math.PI;
-      const rx=(x-cx)*Math.cos(ang);
-      x=cx+rx+Math.sin(v*Math.PI*2)*box.w*bend*.05;
+      const dy=(y-cy)/box.h,ang=dy*twist*Math.PI;
+      x=cx+(x-cx)*Math.cos(ang)+Math.sin(v*Math.PI*2)*box.w*bend*.05;
       y=y+Math.sin(u*Math.PI*3+v*4)*box.h*bend*.04;
       pts[j][i]={x,y}}}
   for(let j=0;j<=rows;j++){ctx.beginPath();
@@ -431,10 +596,9 @@ function modNet(box,colA,colB){
       ctx.beginPath();ctx.moveTo(nodes[i].x,nodes[i].y);ctx.lineTo(nodes[j].x,nodes[j].y);ctx.stroke()}}
   fillInk(inkB,1);for(const p of nodes){ctx.beginPath();ctx.arc(p.x,p.y,2.2,0,Math.PI*2);ctx.fill()}
   ctx.fillStyle=rgba(inkA,.95);ctx.font='600 11px "IBM Plex Mono",monospace';
-  const ticks=['142','40','24','120','46','30','60','32','16'];
   for(let i=0;i<14;i++){const tx=box.x+rnd(0,box.w-30),ty=box.y+rnd(8,box.h-6);
     ctx.save();if(chance(.4))ctx.translate(tx,ty),ctx.rotate(-Math.PI/2);
-    else ctx.translate(tx,ty);ctx.fillText(pick(ticks),0,0);ctx.restore()}
+    else ctx.translate(tx,ty);ctx.fillText(pickText(),0,0);ctx.restore()}
   ctx.restore();
 }
 
@@ -446,17 +610,15 @@ function modTable(box,colA){
   for(let i=1;i<4;i++){const x=box.x+i*colW;
     ctx.beginPath();ctx.moveTo(x,box.y);ctx.lineTo(x,box.y+box.h);ctx.stroke()}
   ctx.fillStyle=rgba(inkA,.95);
-  const head=['1. Jahr','2. Jahr','3. Jahr','4. Jahr'];
   ctx.font='600 13px "IBM Plex Mono",monospace';
   for(let i=0;i<4;i++){ctx.save();
     ctx.translate(box.x+(i+.5)*colW,box.y+box.h-6);ctx.rotate(-Math.PI/2);
-    ctx.fillText(head[i],0,5);ctx.restore()}
+    ctx.fillText(pickText(),0,5);ctx.restore()}
   ctx.font='600 14px "IBM Plex Mono",monospace';
-  const nums=['390','568','854','408','228','40','120'];
   for(let i=0;i<4;i++){const x=box.x+(i+.5)*colW,count=rint(1,3);
     for(let k=0;k<count;k++){const y=box.y+rnd(40,box.h-80);
       ctx.save();ctx.translate(x,y);ctx.rotate(-Math.PI/2);
-      ctx.fillText(pick(nums),0,5);ctx.restore()}}
+      ctx.fillText(pickText(),0,5);ctx.restore()}}
   ctx.restore();
 }
 
@@ -464,37 +626,537 @@ function modTyped(box,colA){
   const inkA=hexToRgb(colA);
   ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
   ctx.fillStyle=rgba(inkA,.9);ctx.font='600 9px "IBM Plex Mono",monospace';
-  const words=['raster','feld','muster','grund','linie','flache','punkt','achse','kante','knoten','dichte'];
   const lines=rint(4,7);
   for(let i=0;i<lines;i++){let s='';const wc=rint(2,5);
-    for(let w=0;w<wc;w++)s+=pick(words)+' ';
+    for(let w=0;w<wc;w++)s+=pickText()+' ';
     ctx.fillText(s,box.x+rnd(0,8),box.y+12+i*11)}
   ctx.restore();
 }
 
-/* ---- NEW: oscilloscope card ---- */
+function modHeader(box,col){
+  const ink=hexToRgb(col);
+  ctx.save();
+  strokeInk(ink,1,1);
+  ctx.beginPath();ctx.moveTo(box.x,box.y+box.h-2);ctx.lineTo(box.x+box.w,box.y+box.h-2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(box.x,box.y+2);ctx.lineTo(box.x+box.w,box.y+2);ctx.stroke();
+  ctx.fillStyle=rgba(ink,1);
+  const colW=box.w/4;
+  ctx.font='800 38px "IBM Plex Mono",monospace';
+  ctx.fillText(pick(['TM','BX','RG','SK','XH']),box.x+8,box.y+box.h-14);
+  ctx.fillText(String(rint(1,9)),box.x+colW+8,box.y+box.h-14);
+  ctx.font='600 10px "IBM Plex Mono",monospace';
+  const blocks=[
+    ['Typographische','Monatsblätter'],
+    ['Revue suisse de','l\'imprimerie'],
+    ['Schweizer Graphische','Mitteilungen']];
+  for(let i=0;i<3;i++){const b=blocks[i];
+    ctx.fillText(b[0],box.x+(i+1)*colW+8,box.y+box.h-30);
+    ctx.fillText(b[1],box.x+(i+1)*colW+8,box.y+box.h-18)}
+  ctx.font='600 9px "IBM Plex Mono",monospace';
+  ctx.fillText('Herausgegeben vom · Édité par',box.x+8,box.y+box.h-4);
+  ctx.restore();
+}
+
+/* ============================================================
+   DIAGRAM MODULES (image 1)
+============================================================ */
+
+function arrow(p1,p2,sz=6){
+  const a=Math.atan2(p2.y-p1.y,p2.x-p1.x);
+  ctx.beginPath();
+  ctx.moveTo(p2.x,p2.y);
+  ctx.lineTo(p2.x-Math.cos(a-.4)*sz,p2.y-Math.sin(a-.4)*sz);
+  ctx.lineTo(p2.x-Math.cos(a+.4)*sz,p2.y-Math.sin(a+.4)*sz);
+  ctx.closePath();ctx.fill();
+}
+function arrowLine(p1,p2,sz=6){
+  ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();
+  arrow(p1,p2,sz);
+}
+
+/* perspective plane projection */
+function persPlane(cx,cy,w,d,tilt){
+  const half=w/2;
+  return {
+    fl:{x:cx-half,y:cy},
+    fr:{x:cx+half,y:cy},
+    bl:{x:cx-half*.55,y:cy-d*tilt},
+    br:{x:cx+half*.55,y:cy-d*tilt}
+  };
+}
+function drawPlane(p,col,a){
+  strokeInk(hexToRgb(col),a,1.2);
+  ctx.beginPath();ctx.moveTo(p.fl.x,p.fl.y);
+  ctx.lineTo(p.fr.x,p.fr.y);ctx.lineTo(p.br.x,p.br.y);
+  ctx.lineTo(p.bl.x,p.bl.y);ctx.closePath();ctx.stroke();
+  /* grid on plane */
+  const div=5;
+  for(let i=1;i<div;i++){
+    const t=i/div;
+    const a1={x:p.fl.x+(p.fr.x-p.fl.x)*t,y:p.fl.y+(p.fr.y-p.fl.y)*t};
+    const a2={x:p.bl.x+(p.br.x-p.bl.x)*t,y:p.bl.y+(p.br.y-p.bl.y)*t};
+    ctx.beginPath();ctx.moveTo(a1.x,a1.y);ctx.lineTo(a2.x,a2.y);ctx.stroke();
+    const b1={x:p.fl.x+(p.bl.x-p.fl.x)*t,y:p.fl.y+(p.bl.y-p.fl.y)*t};
+    const b2={x:p.fr.x+(p.br.x-p.fr.x)*t,y:p.fr.y+(p.br.y-p.fr.y)*t};
+    ctx.beginPath();ctx.moveTo(b1.x,b1.y);ctx.lineTo(b2.x,b2.y);ctx.stroke();
+  }
+}
+
+function modDgVec(box,colA,colB){
+  const cx=box.x+box.w/2, baseY=box.y+box.h*.7;
+  const pw=box.w*.45, pd=box.h*.2;
+  ctx.save();
+  const plane=persPlane(cx,baseY,pw,pd,1);
+  drawPlane(plane,colA,.95);
+  /* vectors curving up & out */
+  const inkB=hexToRgb(colB);
+  strokeInk(inkB,.95,1.4);fillInk(inkB,.95);
+  const cols=6;
+  for(let side=0;side<2;side++){
+    const dir=side?1:-1;
+    for(let i=0;i<cols;i++){
+      const startX=cx+dir*(8+i*4);
+      const startY=baseY-5;
+      const endX=startX+dir*(box.w*.18+i*box.w*.02);
+      const endY=startY-box.h*.35-i*box.h*.04;
+      ctx.beginPath();
+      ctx.moveTo(startX,startY);
+      ctx.quadraticCurveTo(startX,endY+20,endX,endY);
+      ctx.stroke();
+      arrow({x:endX-dir,y:endY},{x:endX,y:endY},6);
+    }
+    /* origin dot */
+    ctx.beginPath();ctx.arc(cx+dir*8,baseY-3,3,0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+}
+
+function modDgLis(box,col){
+  const ink=hexToRgb(col);
+  const cx=box.x+box.w/2, cy=box.y+box.h/2;
+  const r=Math.min(box.w,box.h)*.4;
+  ctx.save();
+  /* diamond outline */
+  strokeInk(ink,.95,1.2);
+  ctx.beginPath();
+  ctx.moveTo(cx,cy-r);ctx.lineTo(cx+r,cy);
+  ctx.lineTo(cx,cy+r);ctx.lineTo(cx-r,cy);ctx.closePath();ctx.stroke();
+  /* axes with arrows */
+  fillInk(ink,1);strokeInk(ink,.9,1);
+  arrowLine({x:cx,y:cy},{x:cx+r+18,y:cy},6);
+  arrowLine({x:cx,y:cy},{x:cx-r-18,y:cy},6);
+  arrowLine({x:cx,y:cy},{x:cx,y:cy-r-18},6);
+  arrowLine({x:cx,y:cy},{x:cx,y:cy+r+18},6);
+  /* nested curves inside diamond */
+  strokeInk(ink,.85,1);
+  const layers=rint(4,8);
+  for(let k=1;k<=layers;k++){
+    const t=k/(layers+1);
+    ctx.beginPath();
+    const N=80;
+    for(let i=0;i<=N;i++){
+      const a=i/N*Math.PI*2;
+      const cs=Math.abs(Math.cos(a))+Math.abs(Math.sin(a));
+      const rr=r*t/cs;
+      const x=cx+Math.cos(a)*rr;
+      const y=cy+Math.sin(a)*rr;
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    }
+    ctx.stroke();
+  }
+  /* vertex dots */
+  for(const [vx,vy] of [[cx,cy-r],[cx+r,cy],[cx,cy+r],[cx-r,cy]]){
+    ctx.beginPath();ctx.arc(vx,vy,3,0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+}
+
+function modDgCage(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  const cx=box.x+box.w/2, midY=box.y+box.h*.55;
+  const w=box.w*.55, h=box.h*.45;
+  ctx.save();
+  /* horizontal plane (red) */
+  const plane=persPlane(cx,midY,w,box.h*.15,1);
+  drawPlane(plane,colA,.95);
+  /* arched cage above */
+  strokeInk(inkB,.95,1.3);
+  const cols=rint(8,12);
+  for(let i=0;i<=cols;i++){
+    const t=i/cols;
+    const x=cx-w/2+t*w;
+    const apexY=midY-h+Math.sin(t*Math.PI)* -h*.05;
+    ctx.beginPath();
+    ctx.moveTo(x,midY);
+    ctx.bezierCurveTo(x,midY-h*.6,x,midY-h*.9,cx,midY-h);
+    ctx.stroke();
+    /* dot at top arc */
+    fillInk(inkB,1);
+    ctx.beginPath();ctx.arc(x,midY,2,0,Math.PI*2);ctx.fill();
+  }
+  /* downward arrows below plane */
+  fillInk(inkB,1);strokeInk(inkB,.95,1.2);
+  for(let i=0;i<=cols;i++){
+    const t=i/cols, x=cx-w/2+t*w;
+    arrowLine({x,y:midY+8},{x,y:midY+box.h*.25},6);
+  }
+  ctx.restore();
+}
+
+function modDgFun(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  const cy=box.y+box.h/2;
+  ctx.save();
+  /* outer parallel-then-curve bundle (white/inkB) */
+  strokeInk(inkB,.95,1.3);
+  const lines=8;
+  const spread=box.h*.45;
+  for(let k=0;k<lines;k++){
+    const t=(k-(lines-1)/2)/((lines-1)/2);
+    const y0=cy+t*spread;
+    const y1=cy+t*spread*.05;
+    ctx.beginPath();
+    ctx.moveTo(box.x+box.w*.05,y0);
+    ctx.bezierCurveTo(
+      box.x+box.w*.35,y0,
+      box.x+box.w*.5,y1,
+      box.x+box.w*.95,y1
+    );
+    ctx.stroke();
+    fillInk(inkB,1);
+    ctx.beginPath();ctx.arc(box.x+box.w*.05,y0,3,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(box.x+box.w*.95,y1,3,0,Math.PI*2);ctx.fill();
+    arrow({x:box.x+box.w*.9,y:y1},{x:box.x+box.w*.97,y:y1},5);
+  }
+  /* inner sine envelope (red/inkA) */
+  strokeInk(inkA,.95,1.3);
+  const innerN=rint(4,6);
+  for(let k=0;k<innerN;k++){
+    ctx.beginPath();
+    const N=80;
+    const amp=spread*.5*(1-k/innerN*.5);
+    const freq=2+k;
+    for(let i=0;i<=N;i++){
+      const u=i/N;
+      const x=box.x+box.w*.1+u*box.w*.4;
+      const env=Math.sin(u*Math.PI);
+      const y=cy+Math.sin(u*freq*Math.PI)*amp*env;
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function modDgHel(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  const cx=box.x+box.w/2, cy=box.y+box.h/2;
+  const len=box.w*.7, amp=box.h*.18;
+  ctx.save();
+  /* horizontal plane band (red) */
+  strokeInk(inkA,.95,1.2);
+  ctx.beginPath();ctx.rect(cx-len/2,cy-amp*.6,len,amp*1.2);ctx.stroke();
+  /* helix wrap (white) */
+  strokeInk(inkB,.95,1.3);
+  const turns=4;
+  const drawSeg=(z0,z1)=>{
+    ctx.beginPath();
+    const N=80;
+    for(let i=0;i<=N;i++){
+      const u=z0+(z1-z0)*i/N;
+      const a=u*Math.PI*2*turns;
+      const x=cx-len/2+u*len;
+      const y=cy+Math.sin(a)*amp;
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    }
+    ctx.stroke();
+  };
+  drawSeg(0,1);
+  /* arrow ends */
+  fillInk(inkB,1);
+  arrow({x:cx-len/2,y:cy},{x:cx-len/2-12,y:cy-6},6);
+  arrow({x:cx+len/2-2,y:cy},{x:cx+len/2+12,y:cy+6},6);
+  /* axis dot markers ("eyes") on plane */
+  fillInk(inkA,1);
+  const dots=5;
+  for(let i=0;i<dots;i++){
+    const x=cx-len/2+(i+.5)*(len/dots);
+    ctx.beginPath();ctx.arc(x,cy,4,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.arc(x,cy,1.4,0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+}
+
+function modDgHour(box,col){
+  const ink=hexToRgb(col);
+  const cx=box.x+box.w/2, cy=box.y+box.h/2;
+  const w=box.w*.6, h=box.h*.35;
+  ctx.save();
+  strokeInk(ink,.95,1.2);
+  const layers=rint(5,9);
+  /* upper parabolic cup */
+  for(let k=1;k<=layers;k++){
+    const t=k/layers;
+    ctx.beginPath();
+    const N=60;
+    for(let i=0;i<=N;i++){
+      const u=i/N*2-1;
+      const x=cx+u*w/2;
+      const y=cy-h*.1-u*u*h*t-h*(1-t)*.05;
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    }
+    ctx.stroke();
+  }
+  /* lower parabolic cup mirrored */
+  for(let k=1;k<=layers;k++){
+    const t=k/layers;
+    ctx.beginPath();
+    const N=60;
+    for(let i=0;i<=N;i++){
+      const u=i/N*2-1;
+      const x=cx+u*w/2;
+      const y=cy+h*.1+u*u*h*t+h*(1-t)*.05;
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    }
+    ctx.stroke();
+  }
+  /* vertical double arrow axis */
+  fillInk(ink,1);strokeInk(ink,.95,1);
+  arrowLine({x:cx,y:cy},{x:cx,y:cy-h*1.15-12},6);
+  arrowLine({x:cx,y:cy},{x:cx,y:cy+h*1.15+12},6);
+  /* center dot */
+  ctx.beginPath();ctx.arc(cx,cy,2.5,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+
+function modCube(box,col){
+  const ink=hexToRgb(col);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  strokeInk(ink,.85,1);
+  const cx=box.x+box.w/2,cy=box.y+box.h/2;
+  const s=Math.min(box.w,box.h)*.42;
+  const div=rint(4,7);
+  const vp={x:cx,y:cy};
+  const front=[];const back=[];
+  for(let j=0;j<=div;j++)for(let i=0;i<=div;i++){
+    const fx=cx-s+i*(2*s/div),fy=cy-s+j*(2*s/div);
+    const t=.55;
+    const bx=fx+(vp.x-fx)*t,by=fy+(vp.y-fy)*t;
+    front.push({x:fx,y:fy});back.push({x:bx,y:by});
+  }
+  const grid=(pts,a)=>{strokeInk(ink,a,1);
+    for(let j=0;j<=div;j++){ctx.beginPath();
+      for(let i=0;i<=div;i++){const p=pts[j*(div+1)+i];i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)}ctx.stroke()}
+    for(let i=0;i<=div;i++){ctx.beginPath();
+      for(let j=0;j<=div;j++){const p=pts[j*(div+1)+i];j?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)}ctx.stroke()}
+  };
+  const layers=rint(4,9);
+  for(let L=0;L<layers;L++){
+    const t=L/(layers-1)*.55;const layer=[];
+    for(const p of front)layer.push({x:p.x+(vp.x-p.x)*t,y:p.y+(vp.y-p.y)*t});
+    grid(layer,.25+(1-t)*.5);
+  }
+  grid(front,.95);
+  strokeInk(ink,.65,1);
+  for(let k=0;k<front.length;k++){
+    ctx.beginPath();ctx.moveTo(front[k].x,front[k].y);
+    ctx.lineTo(back[k].x,back[k].y);ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* ============================================================
+   DATA MODULES (image 2)
+============================================================ */
+
+function modState(box,col){
+  const ink=hexToRgb(col);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  const n=rint(5,8);
+  const nodes=[];
+  for(let i=0;i<n;i++){
+    nodes.push({
+      x:box.x+rnd(box.w*.15,box.w*.85),
+      y:box.y+rnd(box.h*.15,box.h*.85),
+      r:rnd(20,38),
+      label:pickText()
+    });
+  }
+  /* draw circles */
+  strokeInk(ink,.95,1.3);
+  for(const nd of nodes){
+    ctx.beginPath();ctx.arc(nd.x,nd.y,nd.r,0,Math.PI*2);
+    if(chance(.3))ctx.setLineDash([4,4]);else ctx.setLineDash([]);
+    ctx.stroke();ctx.setLineDash([]);
+  }
+  /* curved arrows */
+  fillInk(ink,1);
+  for(let i=0;i<n;i++){
+    const a=nodes[i], b=nodes[(i+rint(1,2))%n];
+    const dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy);if(d<1)continue;
+    const ux=dx/d, uy=dy/d;
+    const sx=a.x+ux*a.r, sy=a.y+uy*a.r;
+    const ex=b.x-ux*b.r, ey=b.y-uy*b.r;
+    const mx=(sx+ex)/2-uy*30, my=(sy+ey)/2+ux*30;
+    ctx.beginPath();ctx.moveTo(sx,sy);
+    ctx.quadraticCurveTo(mx,my,ex,ey);ctx.stroke();
+    /* arrowhead */
+    const aa=Math.atan2(ey-my,ex-mx);
+    ctx.beginPath();
+    ctx.moveTo(ex,ey);
+    ctx.lineTo(ex-Math.cos(aa-.4)*7,ey-Math.sin(aa-.4)*7);
+    ctx.lineTo(ex-Math.cos(aa+.4)*7,ey-Math.sin(aa+.4)*7);
+    ctx.closePath();ctx.fill();
+  }
+  /* labels */
+  ctx.fillStyle=rgba(ink,1);
+  ctx.font='600 11px "IBM Plex Mono",monospace';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  for(const nd of nodes)ctx.fillText(nd.label,nd.x,nd.y);
+  ctx.textAlign='start';ctx.textBaseline='alphabetic';
+  ctx.restore();
+}
+
+function modStep(box,col){
+  const ink=hexToRgb(col);
+  ctx.save();
+  const top=box.y+8, bottom=box.y+box.h-28;
+  const baselineY=(top+bottom)/2;
+  /* grid */
+  strokeInk(ink,.35,1);
+  const cells=rint(20,28);
+  const cw=box.w/cells, ch=(bottom-top)/8;
+  for(let i=0;i<=cells;i++){
+    const x=box.x+i*cw;
+    ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x,bottom);ctx.stroke();
+  }
+  for(let j=0;j<=8;j++){
+    const y=top+j*ch;
+    ctx.beginPath();ctx.moveTo(box.x,y);ctx.lineTo(box.x+box.w,y);ctx.stroke();
+  }
+  /* faint sine guide */
+  strokeInk(ink,.35,1);ctx.setLineDash([3,5]);
+  ctx.beginPath();
+  for(let i=0;i<=200;i++){
+    const u=i/200, x=box.x+u*box.w;
+    const y=baselineY+Math.sin(u*Math.PI*4)*(bottom-top)*.3;
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  }
+  ctx.stroke();ctx.setLineDash([]);
+  /* step segments + dots */
+  strokeInk(ink,.95,1.6);
+  fillInk(ink,1);
+  const vals=[];
+  for(let i=0;i<cells;i++)vals.push(rnd(.1,.9));
+  ctx.beginPath();
+  for(let i=0;i<cells;i++){
+    const x=box.x+(i+.5)*cw;
+    const y=top+(1-vals[i])*(bottom-top);
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  }
+  ctx.stroke();
+  for(let i=0;i<cells;i++){
+    const x=box.x+(i+.5)*cw;
+    const y=top+(1-vals[i])*(bottom-top);
+    ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);ctx.fill();
+  }
+  /* axis numbers */
+  ctx.fillStyle=rgba(ink,.95);
+  ctx.font='600 10px "IBM Plex Mono",monospace';
+  ctx.textAlign='center';
+  const nums=corpus();
+  for(let i=0;i<cells;i++){
+    ctx.fillText(pick(nums),box.x+(i+.5)*cw,box.y+box.h-10);
+  }
+  ctx.textAlign='start';
+  ctx.restore();
+}
+
+function modPhase(box,col){
+  const ink=hexToRgb(col);
+  ctx.save();
+  const cy=box.y+box.h/2;
+  const amp=box.h*.35;
+  /* solid wave */
+  strokeInk(ink,.95,1.4);
+  ctx.beginPath();
+  const N=200;
+  for(let i=0;i<=N;i++){
+    const u=i/N, x=box.x+u*box.w;
+    const env=Math.exp(-Math.pow((u-.5)*2.5,2));
+    const y=cy+Math.sin(u*Math.PI*4)*amp*env;
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  }
+  ctx.stroke();
+  /* dashed phase-shifted */
+  strokeInk(ink,.85,1.2);ctx.setLineDash([6,5]);
+  ctx.beginPath();
+  for(let i=0;i<=N;i++){
+    const u=i/N, x=box.x+u*box.w;
+    const env=Math.exp(-Math.pow((u-.5)*2.5,2));
+    const y=cy+Math.sin(u*Math.PI*4+Math.PI*.5)*amp*env*.7;
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  }
+  ctx.stroke();ctx.setLineDash([]);
+  /* labeled tick markers */
+  fillInk(ink,1);
+  ctx.font='600 12px "IBM Plex Mono",monospace';
+  const ticks=4;
+  for(let i=0;i<ticks;i++){
+    const u=(i+.5)/ticks, x=box.x+u*box.w;
+    strokeInk(ink,.85,1.3);
+    ctx.beginPath();ctx.moveTo(x-12,cy);ctx.lineTo(x+12,cy);ctx.stroke();
+    const t=pickText();
+    ctx.fillStyle=rgba(ink,1);
+    ctx.textAlign='center';
+    ctx.fillText('— '+t+' —',x,cy+5);
+  }
+  ctx.textAlign='start';
+  ctx.restore();
+}
+
+function modLabel(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  const ink=chance(.5)?inkA:inkB;
+  ctx.save();
+  ctx.fillStyle=rgba(ink,.95);
+  ctx.font='600 14px "IBM Plex Mono",monospace';
+  const lbl=pickText();
+  ctx.fillText(lbl,box.x,box.y+box.h-10);
+  ctx.font='600 26px "IBM Plex Mono",monospace';
+  const val=String(rint(120,9999));
+  const unit=pick(['pk','hz','µs','dB','m·s']);
+  const valW=ctx.measureText(val).width;
+  ctx.fillText(val,box.x+box.w-valW-30,box.y+box.h-10);
+  ctx.font='600 11px "IBM Plex Mono",monospace';
+  ctx.fillText(unit,box.x+box.w-26,box.y+box.h-10);
+  strokeInk(ink,.6,1);
+  ctx.beginPath();ctx.moveTo(box.x,box.y+box.h-2);
+  ctx.lineTo(box.x+box.w,box.y+box.h-2);ctx.stroke();
+  const ticks=20;
+  for(let i=0;i<=ticks;i++){
+    const x=box.x+(i/ticks)*box.w;
+    const tl=(i%5===0)?6:3;
+    ctx.beginPath();ctx.moveTo(x,box.y+box.h-2);ctx.lineTo(x,box.y+box.h-2-tl);ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function modOsc(box,colA){
   const ink=hexToRgb(colA);
   const W=box.w,H=box.h,cx=box.x+W/2,cy=box.y+H/2;
   ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,W,H);ctx.clip();
-
-  /* dotted grid */
   const step=Math.max(8,Math.min(W,H)/40);
   fillInk(ink,.55);
   for(let y=box.y+step;y<box.y+H;y+=step)
-    for(let x=box.x+step;x<box.x+W;x+=step){
-      ctx.fillRect(x-1,y-1,2,2)}
-  /* crosshair */
+    for(let x=box.x+step;x<box.x+W;x+=step){ctx.fillRect(x-1,y-1,2,2)}
   strokeInk(ink,.85,1.2);
   ctx.beginPath();ctx.moveTo(box.x,cy);ctx.lineTo(box.x+W,cy);ctx.stroke();
   ctx.beginPath();ctx.moveTo(cx,box.y);ctx.lineTo(cx,box.y+H);ctx.stroke();
-  /* tick marks on axes */
   for(let i=-12;i<=12;i++){const x=cx+i*step;
     ctx.beginPath();ctx.moveTo(x,cy-3);ctx.lineTo(x,cy+3);ctx.stroke()}
   for(let i=-12;i<=12;i++){const y=cy+i*step;
     ctx.beginPath();ctx.moveTo(cx-3,y);ctx.lineTo(cx+3,y);ctx.stroke()}
-
-  /* concentric circles offset */
   strokeInk(ink,.9,1.4);
   const rings=rint(1,3);
   for(let k=0;k<rings;k++){
@@ -502,7 +1164,6 @@ function modOsc(box,colA){
     const r=rnd(Math.min(W,H)*.18,Math.min(W,H)*.42);
     ctx.beginPath();ctx.arc(ox,oy,r,0,Math.PI*2);ctx.stroke();
   }
-  /* lissajous / trailing curves */
   strokeInk(ink,.75,1);
   const trails=rint(3,8);
   for(let t=0;t<trails;t++){
@@ -519,13 +1180,39 @@ function modOsc(box,colA){
     }
     ctx.stroke();
   }
-  /* tiny readout */
   ctx.fillStyle=rgba(ink,.85);ctx.font='600 9px "IBM Plex Mono",monospace';
-  ctx.fillText('S→N '+rint(10,99),cx+4,cy-4);
+  ctx.fillText(pickText(),cx+4,cy-4);
   ctx.restore();
 }
 
-/* ---- NEW: particle scatter ---- */
+function modRings(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  const cx=box.x+box.w/2+rnd(-box.w*.1,box.w*.1);
+  const cy=box.y+box.h/2+rnd(-box.h*.1,box.h*.1);
+  const rmax=Math.min(box.w,box.h)*.45;
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  const rings=rint(3,8);
+  for(let i=0;i<rings;i++){
+    const ink=chance(.5)?inkA:inkB;
+    strokeInk(ink,rnd(.4,.9),rnd(.6,1.4));
+    const r=rmax*((i+1)/rings)*rnd(.85,1.05);
+    const tilt=rnd(.2,.9),rot=rnd(0,Math.PI);
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);ctx.scale(1,tilt);
+    ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.stroke();
+    ctx.restore();
+    fillInk(ink,1);
+    const ang=rnd(0,Math.PI*2);
+    const px=cx+Math.cos(rot)*Math.cos(ang)*r-Math.sin(rot)*Math.sin(ang)*r*tilt;
+    const py=cy+Math.sin(rot)*Math.cos(ang)*r+Math.cos(rot)*Math.sin(ang)*r*tilt;
+    ctx.beginPath();ctx.arc(px,py,rnd(2,4),0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ============================================================
+   TEXTURE MODULES (image 3 inspired)
+============================================================ */
+
 function modParts(box,col){
   const ink=hexToRgb(col);
   ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
@@ -538,7 +1225,6 @@ function modParts(box,col){
     if(chance(.6))ctx.fillRect(x,y,r,r);
     else{ctx.beginPath();ctx.arc(x,y,r*.8,0,Math.PI*2);ctx.fill()}
   }
-  /* clustered dense patch */
   if(chance(.7)){
     const ccx=box.x+rnd(box.w*.2,box.w*.8);
     const ccy=box.y+rnd(box.h*.2,box.h*.8);
@@ -555,7 +1241,6 @@ function modParts(box,col){
   ctx.restore();
 }
 
-/* ---- NEW: curve stream bundle ---- */
 function modStream(box,col){
   const ink=hexToRgb(col);
   ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
@@ -579,12 +1264,10 @@ function modStream(box,col){
     }
     ctx.stroke();
   }
-  /* dot field along bundle */
   fillInk(ink,.85);
   const dots=rint(120,260);
   for(let i=0;i<dots;i++){
-    const u=rng();
-    const x=box.x+u*box.w;
+    const u=rng(), x=box.x+u*box.w;
     const env=Math.sin(u*Math.PI);
     const y=cy+(rng()-.5)*amp*2*env+Math.sin(u*freq1*Math.PI*2+phShift)*amp*env*.3;
     ctx.beginPath();ctx.arc(x,y,rnd(.8,2.2),0,Math.PI*2);ctx.fill();
@@ -592,136 +1275,6 @@ function modStream(box,col){
   ctx.restore();
 }
 
-/* ---- NEW: HUD data label ---- */
-function modLabel(box,colA,colB){
-  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
-  const ink=chance(.5)?inkA:inkB;
-  ctx.save();
-  ctx.fillStyle=rgba(ink,.95);
-  ctx.font='600 14px "IBM Plex Mono",monospace';
-  const codes=['TURB ST-V','R-RADI','DIST AVG','FLUX-Q','RHO·V','THETA-R','DELTA-N'];
-  const id=pick(['P77','P83','P14','P22','M09','X4F','Z11']);
-  const lbl=pick(codes)+'-'+id;
-  ctx.fillText(lbl,box.x,box.y+box.h-10);
-  ctx.font='600 26px "IBM Plex Mono",monospace';
-  const val=String(rint(120,9999));
-  const unit=pick(['pk','hz','µs','dB','m·s']);
-  const valW=ctx.measureText(val).width;
-  ctx.fillText(val,box.x+box.w-valW-30,box.y+box.h-10);
-  ctx.font='600 11px "IBM Plex Mono",monospace';
-  ctx.fillText(unit,box.x+box.w-26,box.y+box.h-10);
-  strokeInk(ink,.6,1);
-  ctx.beginPath();ctx.moveTo(box.x,box.y+box.h-2);
-  ctx.lineTo(box.x+box.w,box.y+box.h-2);ctx.stroke();
-  const ticks=20;
-  for(let i=0;i<=ticks;i++){
-    const x=box.x+(i/ticks)*box.w;
-    const tl=(i%5===0)?6:3;
-    ctx.beginPath();ctx.moveTo(x,box.y+box.h-2);ctx.lineTo(x,box.y+box.h-2-tl);ctx.stroke();
-  }
-  ctx.restore();
-}
-
-/* ---- NEW: 3D perspective cube grid ---- */
-function modCube(box,col){
-  const ink=hexToRgb(col);
-  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
-  strokeInk(ink,.85,1);
-  const cx=box.x+box.w/2,cy=box.y+box.h/2;
-  const s=Math.min(box.w,box.h)*.42;
-  const div=rint(4,7);
-  /* vanishing point */
-  const vp={x:cx,y:cy};
-  const front=[];const back=[];
-  for(let j=0;j<=div;j++)for(let i=0;i<=div;i++){
-    const fx=cx-s+i*(2*s/div),fy=cy-s+j*(2*s/div);
-    const t=.55;
-    const bx=fx+(vp.x-fx)*t,by=fy+(vp.y-fy)*t;
-    front.push({x:fx,y:fy});back.push({x:bx,y:by});
-  }
-  /* front face grid */
-  const grid=(pts,a)=>{
-    strokeInk(ink,a,1);
-    for(let j=0;j<=div;j++){ctx.beginPath();
-      for(let i=0;i<=div;i++){const p=pts[j*(div+1)+i];i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)}ctx.stroke()}
-    for(let i=0;i<=div;i++){ctx.beginPath();
-      for(let j=0;j<=div;j++){const p=pts[j*(div+1)+i];j?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)}ctx.stroke()}
-  };
-  /* depth-stacked layers fading toward vanishing point */
-  const layers=rint(4,9);
-  for(let L=0;L<layers;L++){
-    const t=L/(layers-1)*.55;
-    const layer=[];
-    for(const p of front){
-      layer.push({x:p.x+(vp.x-p.x)*t,y:p.y+(vp.y-p.y)*t});
-    }
-    grid(layer,.25+(1-t)*.5);
-  }
-  grid(front,.95);
-  /* connecting depth lines from front to back */
-  strokeInk(ink,.65,1);
-  for(let k=0;k<front.length;k++){
-    ctx.beginPath();ctx.moveTo(front[k].x,front[k].y);
-    ctx.lineTo(back[k].x,back[k].y);ctx.stroke();
-  }
-  ctx.restore();
-}
-
-/* ---- NEW: Swiss header bar ---- */
-function modHeader(box,col){
-  const ink=hexToRgb(col);
-  ctx.save();
-  strokeInk(ink,1,1);
-  ctx.beginPath();ctx.moveTo(box.x,box.y+box.h-2);ctx.lineTo(box.x+box.w,box.y+box.h-2);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(box.x,box.y+2);ctx.lineTo(box.x+box.w,box.y+2);ctx.stroke();
-  ctx.fillStyle=rgba(ink,1);
-  const colW=box.w/4;
-  ctx.font='800 38px "IBM Plex Mono",monospace';
-  ctx.fillText(pick(['TM','BX','RG','SK']),box.x+8,box.y+box.h-14);
-  ctx.font='800 38px "IBM Plex Mono",monospace';
-  ctx.fillText(String(rint(1,9)),box.x+colW+8,box.y+box.h-14);
-  ctx.font='600 10px "IBM Plex Mono",monospace';
-  const blocks=[
-    ['Typographische','Monatsblätter'],
-    ['Revue suisse de','l\'imprimerie'],
-    ['Schweizer Graphische','Mitteilungen']];
-  for(let i=0;i<3;i++){const b=blocks[i];
-    ctx.fillText(b[0],box.x+(i+1)*colW+8,box.y+box.h-30);
-    ctx.fillText(b[1],box.x+(i+1)*colW+8,box.y+box.h-18);
-  }
-  ctx.font='600 9px "IBM Plex Mono",monospace';
-  ctx.fillText('Herausgegeben vom · Édité par',box.x+8,box.y+box.h-4);
-  ctx.restore();
-}
-
-/* ---- NEW: rings / orbits ---- */
-function modRings(box,colA,colB){
-  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
-  const cx=box.x+box.w/2+rnd(-box.w*.1,box.w*.1);
-  const cy=box.y+box.h/2+rnd(-box.h*.1,box.h*.1);
-  const rmax=Math.min(box.w,box.h)*.45;
-  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
-  const rings=rint(3,8);
-  for(let i=0;i<rings;i++){
-    const ink=chance(.5)?inkA:inkB;
-    strokeInk(ink,rnd(.4,.9),rnd(.6,1.4));
-    const r=rmax*((i+1)/rings)*rnd(.85,1.05);
-    const tilt=rnd(.2,.9),rot=rnd(0,Math.PI);
-    ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);ctx.scale(1,tilt);
-    ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.stroke();
-    ctx.restore();
-    /* tracer dot */
-    fillInk(ink,1);
-    const ang=rnd(0,Math.PI*2);
-    const x=cx+Math.cos(ang+rot)*r*Math.cos(0)+Math.sin(ang+rot)*0;
-    const px=cx+Math.cos(rot)*Math.cos(ang)*r-Math.sin(rot)*Math.sin(ang)*r*tilt;
-    const py=cy+Math.sin(rot)*Math.cos(ang)*r+Math.cos(rot)*Math.sin(ang)*r*tilt;
-    ctx.beginPath();ctx.arc(px,py,rnd(2,4),0,Math.PI*2);ctx.fill();
-  }
-  ctx.restore();
-}
-
-/* ---- NEW: flow field streamlines ---- */
 function modFlow(box,colA,colB){
   const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
   ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
@@ -748,7 +1301,98 @@ function modFlow(box,colA,colB){
   ctx.restore();
 }
 
-/* ---------- grain ---------- */
+function modStars(box,col){
+  const ink=hexToRgb(col);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  /* faint background grid */
+  strokeInk(ink,.12,1);
+  const gs=Math.min(box.w,box.h)/16;
+  for(let x=box.x;x<box.x+box.w;x+=gs){
+    ctx.beginPath();ctx.moveTo(x,box.y);ctx.lineTo(x,box.y+box.h);ctx.stroke()}
+  for(let y=box.y;y<box.y+box.h;y+=gs){
+    ctx.beginPath();ctx.moveTo(box.x,y);ctx.lineTo(box.x+box.w,y);ctx.stroke()}
+  /* stars */
+  const count=Math.floor(box.w*box.h*.0006);
+  for(let i=0;i<count;i++){
+    const x=box.x+rng()*box.w, y=box.y+rng()*box.h;
+    const br=Math.pow(rng(),3);
+    const r=br>.85?2.2:br>.5?1.5:.9;
+    fillInk(ink,rnd(.4,1));
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+    /* occasional bright cross */
+    if(br>.92){strokeInk(ink,.7,.6);
+      ctx.beginPath();ctx.moveTo(x-r*3,y);ctx.lineTo(x+r*3,y);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x,y-r*3);ctx.lineTo(x,y+r*3);ctx.stroke();
+    }
+  }
+  /* tick text scattered */
+  if(chance(.5)){
+    ctx.fillStyle=rgba(ink,.6);ctx.font='600 9px "IBM Plex Mono",monospace';
+    for(let i=0;i<5;i++){
+      ctx.fillText(pickText(),box.x+rnd(0,box.w-30),box.y+rnd(10,box.h-4));
+    }
+  }
+  ctx.restore();
+}
+
+function modStringArt(box,col){
+  const ink=hexToRgb(col);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  strokeInk(ink,.55,.8);
+  /* spine: vertical line on left */
+  const spineX=box.x+box.w*rnd(.05,.2);
+  const top=box.y+box.h*.1, bot=box.y+box.h*.9;
+  /* curve along which the ends fall */
+  const N=rint(40,90);
+  ctx.beginPath();ctx.moveTo(spineX,top);ctx.lineTo(spineX,bot);ctx.stroke();
+  /* tick marks on spine */
+  for(let i=0;i<=N;i++){
+    const y=top+i/N*(bot-top);
+    ctx.beginPath();ctx.moveTo(spineX-3,y);ctx.lineTo(spineX+3,y);ctx.stroke();
+  }
+  /* radiate strings */
+  strokeInk(ink,.5,.7);
+  const tipX=box.x+box.w*rnd(.55,.85);
+  const tipY=box.y+box.h*rnd(.55,.9);
+  for(let i=0;i<=N;i++){
+    const t=i/N;
+    const y=top+t*(bot-top);
+    const ex=spineX+(tipX-spineX)*t;
+    const ey=top+(tipY-top)*(t*t);
+    ctx.beginPath();ctx.moveTo(spineX,y);ctx.lineTo(ex,ey);ctx.stroke();
+  }
+  /* small box at base */
+  strokeInk(ink,.9,1);
+  ctx.beginPath();ctx.rect(spineX-8,bot,16,12);ctx.stroke();
+  ctx.restore();
+}
+
+function modDotOrbit(box,col){
+  const ink=hexToRgb(col);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  const arcs=rint(2,5);
+  fillInk(ink,1);
+  for(let k=0;k<arcs;k++){
+    /* bezier path of dots */
+    const p0={x:box.x+rnd(0,box.w*.3),y:box.y+rnd(0,box.h)};
+    const p1={x:box.x+rnd(box.w*.2,box.w*.7),y:box.y+rnd(0,box.h)};
+    const p2={x:box.x+rnd(box.w*.5,box.w*.95),y:box.y+rnd(0,box.h)};
+    const dots=rint(40,90);
+    for(let i=0;i<=dots;i++){
+      const t=i/dots;
+      const x=(1-t)*(1-t)*p0.x+2*(1-t)*t*p1.x+t*t*p2.x;
+      const y=(1-t)*(1-t)*p0.y+2*(1-t)*t*p1.y+t*t*p2.y;
+      const r=.8+t*1.4;
+      ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+/* ============================================================
+   GRAIN + CROP MARKS
+============================================================ */
+
 function applyGrain(W,H,amt){
   if(amt<=0)return;
   const img=ctx.getImageData(0,0,W,H);const d=img.data;
@@ -761,63 +1405,38 @@ function applyGrain(W,H,amt){
   ctx.putImageData(img,0,0);
 }
 
-/* ---------- compose ---------- */
-function draw(){
-  setSeed(ui.seed.value||'riso');
-  const W=+ui.w.value,H=+ui.h.value;
-  cv.width=W;cv.height=H;
-  cv.style.background=ui.cP.value;
-  const maxH=window.innerHeight-48,maxW=window.innerWidth-280-48;
-  const scale=Math.min(maxW/W,maxH/H,1);
-  cv.style.width=(W*scale)+'px';cv.style.height=(H*scale)+'px';
-
-  ctx.fillStyle=ui.cP.value;ctx.fillRect(0,0,W,H);
-
-  const enabled=[];
-  for(const [k,el] of Object.entries(ui.modules))if(el.checked)enabled.push(k);
-  if(enabled.length===0)return;
-
-  const N=+ui.n.value;
-  const misreg=+ui.m.value;
-  const glow=+ui.gl.value;
-  const blend=ui.blend.value;
-  const layout=ui.layout.value;
-
-  /* plan placements */
-  const plan=[];
-  const occupied=[];
-  for(let i=0;i<N;i++){
-    const kind=pick(enabled);
-    let box;
-    if(layout==='single'&&i===0){box=fullRegion(W,H)}
-    else if(layout==='free'){box=pickFree(W,H)}
-    else{box=pickRegion(W,H,occupied);if(!box){box=pickFree(W,H)}}
-    const layer=assignLayer(kind);
-    plan.push({kind,box,layer});
+function drawCropMarks(W,H){
+  const inkA=hexToRgb(ui.cA.value);
+  const m=24,len=18;
+  ctx.save();
+  strokeInk(inkA,.9,1);
+  /* corners */
+  const corners=[
+    [m,m,1,1],[W-m,m,-1,1],[m,H-m,1,-1],[W-m,H-m,-1,-1]];
+  for(const [x,y,dx,dy] of corners){
+    ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+dx*len,y);
+    ctx.moveTo(x,y);ctx.lineTo(x,y+dy*len);ctx.stroke();
   }
-
-  if(glow>0)ctx.shadowBlur=glow,ctx.shadowColor=rgba(hexToRgb(ui.cA.value),.9);
-  ctx.globalCompositeOperation=blend;
-
-  /* Layer B */
-  ctx.save();ctx.translate(rnd(-misreg,misreg),rnd(-misreg,misreg));
-  for(const p of plan){if(p.layer!=='B')continue;drawModule(p.kind,p.box,'B')}
+  /* registration circles centered on each axis */
+  for(const [cx,cy] of [[W/2,m+4],[W/2,H-m-4],[m+4,H/2],[W-m-4,H/2]]){
+    ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx-6,cy);ctx.lineTo(cx+6,cy);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx,cy-6);ctx.lineTo(cx,cy+6);ctx.stroke();
+  }
+  /* watermark */
+  ctx.fillStyle=rgba(inkA,.8);
+  ctx.font='600 10px "IBM Plex Mono",monospace';
+  ctx.fillText(`SEED: ${ui.seed.value}  ·  ${W}×${H}`,m+len+4,H-m+4);
   ctx.restore();
-  /* Layer A */
-  ctx.save();ctx.translate(rnd(-misreg,misreg),rnd(-misreg,misreg));
-  for(const p of plan){if(p.layer!=='A')continue;drawModule(p.kind,p.box,'A')}
-  ctx.restore();
-
-  ctx.globalCompositeOperation='source-over';
-  ctx.shadowBlur=0;
-
-  applyGrain(W,H,+ui.g.value);
 }
 
+/* ============================================================
+   COMPOSE
+============================================================ */
+
 function assignLayer(kind){
-  /* deterministic per kind, with some variation */
-  const A_pref=['tri','pix','tab','typ','osc','label','head','cube','parts'];
-  const B_pref=['hex','net','mesh','stream','rings','flow'];
+  const A_pref=['tri','pix','tab','typ','osc','label','head','cube','parts','state','step','phase','dgvec','dghour','dglis','stars','strar','dot'];
+  const B_pref=['hex','net','mesh','stream','rings','flow','dgcage','dgfun','dghel'];
   if(A_pref.includes(kind))return chance(.85)?'A':'B';
   if(B_pref.includes(kind))return chance(.85)?'B':'A';
   return chance(.5)?'A':'B';
@@ -835,14 +1454,120 @@ function drawModule(kind,box,layer){
     case 'net':modNet(box,colA,colB);break;
     case 'tab':modTable(box,col);break;
     case 'typ':modTyped(box,col);break;
+    case 'head':modHeader(box,col);break;
+    case 'dgvec':modDgVec(box,colA,colB);break;
+    case 'dglis':modDgLis(box,col);break;
+    case 'dgcage':modDgCage(box,colA,colB);break;
+    case 'dgfun':modDgFun(box,colA,colB);break;
+    case 'dghel':modDgHel(box,colA,colB);break;
+    case 'dghour':modDgHour(box,col);break;
+    case 'cube':modCube(box,col);break;
+    case 'state':modState(box,col);break;
+    case 'step':modStep(box,col);break;
+    case 'phase':modPhase(box,col);break;
+    case 'label':modLabel(box,colA,colB);break;
     case 'osc':modOsc(box,col);break;
+    case 'rings':modRings(box,colA,colB);break;
     case 'parts':modParts(box,col);break;
     case 'stream':modStream(box,col);break;
-    case 'label':modLabel(box,colA,colB);break;
-    case 'cube':modCube(box,col);break;
-    case 'head':modHeader(box,col);break;
-    case 'rings':modRings(box,colA,colB);break;
     case 'flow':modFlow(box,colA,colB);break;
+    case 'stars':modStars(box,col);break;
+    case 'strar':modStringArt(box,col);break;
+    case 'dot':modDotOrbit(box,col);break;
+  }
+}
+
+function draw(){
+  setSeed(ui.seed.value||'riso');
+  const W=+ui.w.value,H=+ui.h.value;
+  cv.width=W;cv.height=H;
+  cv.style.background=ui.cP.value;
+  const maxH=window.innerHeight-48,maxW=window.innerWidth-300-48;
+  const scale=Math.min(maxW/W,maxH/H,1);
+  cv.style.width=(W*scale)+'px';cv.style.height=(H*scale)+'px';
+
+  ctx.fillStyle=ui.cP.value;ctx.fillRect(0,0,W,H);
+
+  const enabled=[];
+  for(const [k,el] of Object.entries(ui.modules))if(el.checked)enabled.push(k);
+  if(enabled.length===0){if(ui.crop.checked)drawCropMarks(W,H);return}
+
+  const N=+ui.n.value;
+  const misreg=+ui.m.value;
+  const glow=+ui.gl.value;
+  const blend=ui.blend.value;
+  const layout=ui.layout.value;
+  const plan=[];
+
+  if(layout==='single'){
+    plan.push({kind:pick(enabled),box:fullRegion(W,H),layer:assignLayer(enabled[0])});
+  }else if(layout==='grid'){
+    const rows=+ui.gr.value, cols=+ui.gc.value;
+    const cells=gridRegions(W,H,rows,cols,Math.min(W,H)*.025);
+    for(let i=0;i<cells.length;i++){
+      const kind=enabled[i%enabled.length];
+      plan.push({kind,box:cells[i],layer:assignLayer(kind)});
+    }
+  }else{
+    const occupied=[];
+    for(let i=0;i<N;i++){
+      const kind=pick(enabled);
+      let box;
+      if(layout==='free')box=pickFree(W,H);
+      else{box=pickRegion(W,H,occupied);if(!box)box=pickFree(W,H)}
+      plan.push({kind,box,layer:assignLayer(kind)});
+    }
+  }
+
+  if(glow>0){ctx.shadowBlur=glow;ctx.shadowColor=rgba(hexToRgb(ui.cA.value),.9)}
+  ctx.globalCompositeOperation=blend;
+
+  ctx.save();ctx.translate(rnd(-misreg,misreg),rnd(-misreg,misreg));
+  for(const p of plan){if(p.layer!=='B')continue;drawModule(p.kind,p.box,'B')}
+  ctx.restore();
+  ctx.save();ctx.translate(rnd(-misreg,misreg),rnd(-misreg,misreg));
+  for(const p of plan){if(p.layer!=='A')continue;drawModule(p.kind,p.box,'A')}
+  ctx.restore();
+
+  ctx.globalCompositeOperation='source-over';
+  ctx.shadowBlur=0;
+
+  applyGrain(W,H,+ui.g.value);
+  if(ui.crop.checked)drawCropMarks(W,H);
+}
+
+/* ---------- solo draw + export ---------- */
+function drawSolo(forExport){
+  const kind=ui.solo.value;
+  if(!kind){alert('Pick a module from the Solo dropdown first.');return}
+  setSeed(ui.seed.value||'riso');
+  const W=+ui.w.value,H=+ui.h.value;
+  cv.width=W;cv.height=H;
+  cv.style.background=ui.cP.value;
+  const maxH=window.innerHeight-48,maxW=window.innerWidth-300-48;
+  const scale=Math.min(maxW/W,maxH/H,1);
+  cv.style.width=(W*scale)+'px';cv.style.height=(H*scale)+'px';
+
+  ctx.fillStyle=ui.cP.value;ctx.fillRect(0,0,W,H);
+
+  const glow=+ui.gl.value;
+  if(glow>0){ctx.shadowBlur=glow;ctx.shadowColor=rgba(hexToRgb(ui.cA.value),.9)}
+  ctx.globalCompositeOperation=ui.blend.value;
+
+  const pad=Math.min(W,H)*.08;
+  const box={x:pad,y:pad,w:W-pad*2,h:H-pad*2};
+  drawModule(kind,box,assignLayer(kind));
+
+  ctx.globalCompositeOperation='source-over';
+  ctx.shadowBlur=0;
+  applyGrain(W,H,+ui.g.value);
+  if(ui.crop.checked)drawCropMarks(W,H);
+
+  if(forExport){
+    const a=document.createElement('a');
+    a.download=`risogen-${kind}-${ui.seed.value}.png`;
+    a.href=cv.toDataURL('image/png');a.click();
+    setTimeout(draw,150);  /* restore main composition */
   }
 }
 
