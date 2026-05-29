@@ -264,8 +264,12 @@
         <button id="export">Export PNG</button>
         <button id="exportHi" class="alt">PNG @2x</button>
       </div>
+      <div class="btn-row">
+        <button id="exportPSD">Export PSD (layered)</button>
+      </div>
       <div class="foot">
-        <kbd>Space</kbd> regen · <kbd>S</kbd> seed · <kbd>E</kbd> export · <kbd>1-8</kbd> presets
+        <kbd>Space</kbd> regen · <kbd>S</kbd> seed · <kbd>E</kbd> export · <kbd>1-9</kbd> presets
+        <br>PSD: each module is its own raster layer with the active blend mode + paper background.
       </div>
     </div>
   </aside>
@@ -296,7 +300,8 @@ const chance=p=>rng()<p;
 
 /* ---------- canvas + state ---------- */
 const cv=document.getElementById('cv');
-const ctx=cv.getContext('2d');
+let ctx=cv.getContext('2d');
+const mainCtx=ctx;
 const $=id=>document.getElementById(id);
 const ui={
   seed:$('seed'),
@@ -356,6 +361,7 @@ $('export').onclick=()=>exportPNG(1);
 $('exportHi').onclick=()=>exportPNG(2);
 $('soloDraw').onclick=()=>drawSolo(false);
 $('soloExport').onclick=()=>drawSolo(true);
+$('exportPSD').onclick=()=>exportPSD();
 
 /* ---------- palette library ---------- */
 const PALETTES={
@@ -2024,6 +2030,230 @@ function exportPNG(scale){
   const a=document.createElement('a');
   a.download=`risogen-${ui.seed.value}.png`;
   a.href=tmp.toDataURL('image/png');a.click();
+}
+
+/* ============================================================
+   PSD EXPORT — real .psd file Photoshop opens natively.
+   Each module becomes its own rasterised RGBA layer with the
+   active blend mode. Paper sits on the bottom, crop marks (if
+   enabled) sit on top. The composite image data is read straight
+   from the live canvas so the flattened PSD preview matches the
+   on-screen output exactly.
+   PSD is big-endian; layers are stored bottom-up.
+============================================================ */
+
+const PS_BLEND={
+  'multiply':'mul ','lighter':'lddg','screen':'scrn','source-over':'norm'
+};
+
+class BinWriter{
+  constructor(cap=65536){
+    this.buf=new Uint8Array(cap);
+    this.view=new DataView(this.buf.buffer);
+    this.pos=0;
+  }
+  ensure(n){
+    if(this.pos+n<=this.buf.length)return;
+    let cap=this.buf.length;
+    while(cap<this.pos+n)cap*=2;
+    const nb=new Uint8Array(cap);nb.set(this.buf);
+    this.buf=nb;this.view=new DataView(nb.buffer);
+  }
+  u8(v){this.ensure(1);this.view.setUint8(this.pos,v&0xff);this.pos+=1}
+  u16(v){this.ensure(2);this.view.setUint16(this.pos,v&0xffff);this.pos+=2}
+  u32(v){this.ensure(4);this.view.setUint32(this.pos,v>>>0);this.pos+=4}
+  i16(v){this.ensure(2);this.view.setInt16(this.pos,v);this.pos+=2}
+  i32(v){this.ensure(4);this.view.setInt32(this.pos,v);this.pos+=4}
+  bytes(a){this.ensure(a.length);this.buf.set(a,this.pos);this.pos+=a.length}
+  ascii(s){const a=new Uint8Array(s.length);
+    for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i)&0xff;this.bytes(a)}
+  zeros(n){this.ensure(n);this.pos+=n}
+  patchU32(at,v){this.view.setUint32(at,v>>>0)}
+  blob(type){return new Blob([this.buf.slice(0,this.pos)],
+    {type:type||'application/octet-stream'})}
+}
+
+function writePSD(W,H,layers,composite){
+  /* generous initial buffer: composite + every layer rasterized */
+  const est=W*H*4*(layers.length+1)+65536;
+  const w=new BinWriter(Math.max(est,1<<20));
+  /* === Header === */
+  w.ascii('8BPS');w.u16(1);w.zeros(6);
+  w.u16(4);w.u32(H);w.u32(W);w.u16(8);w.u16(3);
+  /* === Color mode data === */
+  w.u32(0);
+  /* === Image resources === */
+  w.u32(0);
+  /* === Layer and mask info section === */
+  const lmiStart=w.pos;w.u32(0);
+  const liStart=w.pos;w.u32(0);
+  w.i16(-layers.length);  /* negative => first alpha is transparency */
+  /* layer records */
+  for(const L of layers){
+    w.i32(L.top);w.i32(L.left);w.i32(L.bottom);w.i32(L.right);
+    const lw=L.right-L.left, lh=L.bottom-L.top;
+    const chanLen=2+lw*lh;  /* 2 bytes compression marker + raw pixels */
+    w.u16(4);
+    for(const id of [0,1,2,-1]){w.i16(id);w.u32(chanLen)}
+    w.ascii('8BIM');w.ascii(L.blendMode);
+    w.u8(Math.round((L.opacity??1)*255));
+    w.u8(0);                                  /* clipping */
+    w.u8(L.visible===false?0x02:0);           /* flags */
+    w.u8(0);                                  /* filler */
+    /* extra data */
+    const exStart=w.pos;w.u32(0);
+    w.u32(0); /* layer mask data length */
+    w.u32(0); /* blending ranges length */
+    /* Pascal name padded to multiple of 4 (incl. length byte) */
+    const name=String(L.name||'').slice(0,255);
+    const nb=new Uint8Array(name.length);
+    for(let i=0;i<name.length;i++)nb[i]=name.charCodeAt(i)&0xff;
+    w.u8(nb.length);w.bytes(nb);
+    const nlen=1+nb.length;
+    w.zeros((4-(nlen%4))%4);
+    w.patchU32(exStart,w.pos-exStart-4);
+  }
+  /* channel image data per layer (planar R,G,B,A) */
+  for(const L of layers){
+    const lw=L.right-L.left, lh=L.bottom-L.top;
+    const pix=lw*lh;
+    const src=L.imageData;
+    const ch=new Uint8Array(pix);
+    for(let plane=0;plane<4;plane++){
+      w.u16(0);  /* raw (uncompressed) */
+      for(let i=0,j=plane;i<pix;i++,j+=4)ch[i]=src[j];
+      w.bytes(ch);
+    }
+  }
+  let liLen=w.pos-liStart-4;
+  if(liLen&1){w.zeros(1);liLen++}
+  w.patchU32(liStart,liLen);
+  /* global layer mask info */
+  w.u32(0);
+  let lmiLen=w.pos-lmiStart-4;
+  if(lmiLen&1){w.zeros(1);lmiLen++}
+  w.patchU32(lmiStart,lmiLen);
+  /* === Composite image data === */
+  w.u16(0);
+  const pix=W*H;
+  const ch=new Uint8Array(pix);
+  for(let plane=0;plane<4;plane++){
+    for(let i=0,j=plane;i<pix;i++,j+=4)ch[i]=composite[j];
+    w.bytes(ch);
+  }
+  return w.blob('image/vnd.adobe.photoshop');
+}
+
+function exportPSD(){
+  /* Regenerate the main composite first so the PSD's flattened preview
+     matches what the user sees (in case they were viewing a solo, etc). */
+  draw();
+  /* Reseed and rebuild the exact plan that draw() just used, so
+     each layer's bitmap aligns with the on-screen composite. */
+  setSeed(ui.seed.value||'riso');
+  const W=+ui.w.value,H=+ui.h.value;
+  const enabled=[];
+  for(const [k,el] of Object.entries(ui.modules))if(el.checked)enabled.push(k);
+  if(enabled.length===0){alert('Enable at least one module first.');return}
+  const N=+ui.n.value;
+  const misreg=+ui.m.value;
+  const layout=ui.layout.value;
+
+  const plan=[];
+  if(layout==='single'){
+    plan.push({kind:pick(enabled),box:fullRegion(W,H),layer:assignLayer(enabled[0])});
+  }else if(layout==='grid'){
+    const rows=+ui.gr.value,cols=+ui.gc.value;
+    const cells=gridRegions(W,H,rows,cols,Math.min(W,H)*.025);
+    for(let i=0;i<cells.length;i++){
+      const kind=enabled[i%enabled.length];
+      plan.push({kind,box:cells[i],layer:assignLayer(kind)});
+    }
+  }else{
+    const occupied=[];
+    for(let i=0;i<N;i++){
+      const kind=pick(enabled);
+      let box;
+      if(layout==='free')box=pickFree(W,H);
+      else{box=pickRegion(W,H,occupied);if(!box)box=pickFree(W,H)}
+      plan.push({kind,box,layer:assignLayer(kind)});
+    }
+  }
+
+  const blendKey=PS_BLEND[ui.blend.value]||'norm';
+  const layers=[];
+
+  /* Bottom: paper */
+  {
+    const cnv=document.createElement('canvas');
+    cnv.width=W;cnv.height=H;
+    const c2=cnv.getContext('2d');
+    c2.fillStyle=ui.cP.value;c2.fillRect(0,0,W,H);
+    layers.push({
+      name:'Paper',blendMode:'norm',opacity:1,
+      top:0,left:0,bottom:H,right:W,
+      imageData:c2.getImageData(0,0,W,H).data
+    });
+  }
+
+  /* Render one module → offscreen canvas matching its box, clipped */
+  const renderModule=(p,ox,oy,idx)=>{
+    const lw=Math.max(1,Math.ceil(p.box.w));
+    const lh=Math.max(1,Math.ceil(p.box.h));
+    const cnv=document.createElement('canvas');
+    cnv.width=lw;cnv.height=lh;
+    const lctx=cnv.getContext('2d');
+    /* swap global ctx so module functions draw here */
+    ctx=lctx;
+    lctx.save();
+    lctx.translate(-p.box.x,-p.box.y);
+    drawModule(p.kind,p.box,p.layer);
+    lctx.restore();
+    const data=lctx.getImageData(0,0,lw,lh).data;
+    ctx=mainCtx;
+    const top=Math.floor(p.box.y+oy);
+    const left=Math.floor(p.box.x+ox);
+    layers.push({
+      name:`${String(idx).padStart(2,'0')} ${MODULE_LABELS[p.kind]||p.kind} [${p.layer}]`,
+      blendMode:blendKey,opacity:1,
+      top,left,bottom:top+lh,right:left+lw,
+      imageData:data
+    });
+  };
+
+  /* Mirror draw()'s rng consumption order exactly: B offset → B draws → A offset → A draws */
+  const Bs=plan.filter(p=>p.layer==='B');
+  const As=plan.filter(p=>p.layer==='A');
+  const oBx=rnd(-misreg,misreg), oBy=rnd(-misreg,misreg);
+  let idx=1;
+  for(const p of Bs)renderModule(p,oBx,oBy,idx++);
+  const oAx=rnd(-misreg,misreg), oAy=rnd(-misreg,misreg);
+  for(const p of As)renderModule(p,oAx,oAy,idx++);
+
+  /* Top: crop marks if enabled */
+  if(ui.crop.checked){
+    const cnv=document.createElement('canvas');
+    cnv.width=W;cnv.height=H;
+    ctx=cnv.getContext('2d');
+    drawCropMarks(W,H);
+    const data=ctx.getImageData(0,0,W,H).data;
+    ctx=mainCtx;
+    layers.push({
+      name:'Crop marks',blendMode:'norm',opacity:1,
+      top:0,left:0,bottom:H,right:W,
+      imageData:data
+    });
+  }
+
+  /* Composite = the live canvas (matches what user sees, grain and all) */
+  const composite=cv.getContext('2d').getImageData(0,0,W,H).data;
+
+  const blob=writePSD(W,H,layers,composite);
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.download=`risogen-${ui.seed.value}.psd`;
+  a.href=url;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
 }
 
 window.addEventListener('resize',draw);
