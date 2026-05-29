@@ -81,6 +81,7 @@
         <div class="preset" data-p="cyber">Cyber</div>
         <div class="preset" data-p="blueprint">Blueprint</div>
         <div class="preset" data-p="poster">Poster</div>
+        <div class="preset" data-p="cwsa">Start Again?</div>
       </div>
     </div>
 
@@ -145,6 +146,9 @@
           <option value="mint">Mint riso</option>
           <option value="violet">Violet dusk</option>
           <option value="electric">Electric jade</option>
+          <option value="sovereign">Sovereign (earth/clay)</option>
+          <option value="commons">Commons (moss/ink)</option>
+          <option value="vellum">Vellum (umber/rose)</option>
         </select>
       </label>
       <label>Ink A
@@ -171,6 +175,9 @@
           <option value="numbers">Numbers</option>
           <option value="poetic">Poetic (signal, horizon…)</option>
           <option value="constellation">Constellations</option>
+          <option value="sovereignty">Sovereignty (reclaim, root…)</option>
+          <option value="manifesto">Manifesto (full phrases)</option>
+          <option value="oligarchy">Oligarchy (platform, walled…)</option>
           <option value="mixed">Mixed</option>
           <option value="custom">Custom (below)</option>
         </select>
@@ -223,6 +230,19 @@
         <div class="check"><input type="checkbox" id="mStars"> stars</div>
         <div class="check"><input type="checkbox" id="mStrAr"> stringart</div>
         <div class="check"><input type="checkbox" id="mDot"> dot orbit</div>
+      </div>
+
+      <div class="cat-ttl">Start again? (exhibition)</div>
+      <div class="grid3">
+        <div class="check"><input type="checkbox" id="mDgTip"> tipping pt</div>
+        <div class="check"><input type="checkbox" id="mDgPan"> panopticon</div>
+        <div class="check"><input type="checkbox" id="mDgWall"> walled grdn</div>
+        <div class="check"><input type="checkbox" id="mDgFed"> federation</div>
+        <div class="check"><input type="checkbox" id="mDgSiph"> siphon</div>
+        <div class="check"><input type="checkbox" id="mDgSeed"> seed/return</div>
+        <div class="check"><input type="checkbox" id="mDgThr"> threshold</div>
+        <div class="check"><input type="checkbox" id="mDgMan"> manifesto</div>
+        <div class="check"><input type="checkbox" id="mDgErod"> erosion</div>
       </div>
     </div>
 
@@ -294,7 +314,10 @@ const ui={
     state:$('mState'),step:$('mStep'),phase:$('mPhase'),
     label:$('mLabel'),osc:$('mOsc'),rings:$('mRings'),
     parts:$('mParts'),stream:$('mStream'),flow:$('mFlow'),
-    stars:$('mStars'),strar:$('mStrAr'),dot:$('mDot')}
+    stars:$('mStars'),strar:$('mStrAr'),dot:$('mDot'),
+    dgtip:$('mDgTip'),dgpan:$('mDgPan'),dgwall:$('mDgWall'),
+    dgfed:$('mDgFed'),dgsiph:$('mDgSiph'),dgseed:$('mDgSeed'),
+    dgthr:$('mDgThr'),dgman:$('mDgMan'),dgerod:$('mDgErod')}
 };
 
 const MODULE_LABELS={
@@ -306,7 +329,12 @@ const MODULE_LABELS={
   state:'state graph',step:'step chart',phase:'phase waves',
   label:'HUD label',osc:'oscilloscope',rings:'rings/orbits',
   parts:'particles',stream:'curve streams',flow:'flow field',
-  stars:'star field',strar:'string art',dot:'dotted orbit'};
+  stars:'star field',strar:'string art',dot:'dotted orbit',
+  dgtip:'tipping point (CWSA)',dgpan:'panopticon (CWSA)',
+  dgwall:'walled garden (CWSA)',dgfed:'federation (CWSA)',
+  dgsiph:'data siphon (CWSA)',dgseed:'seed / return (CWSA)',
+  dgthr:'threshold curve (CWSA)',dgman:'manifesto block (CWSA)',
+  dgerod:'erosion grid (CWSA)'};
 
 /* populate solo selector */
 (function(){const sel=ui.solo;
@@ -339,7 +367,10 @@ const PALETTES={
   monoink:   ['#0a0a0a','#0a0a0a','#efeae0'],
   mint:      ['#e94f4f','#7bcfb4','#fbf5e8'],
   violet:    ['#ff5cb1','#7d5cff','#0a0816'],
-  electric:  ['#caff3a','#3affd5','#0a0a0a']
+  electric:  ['#caff3a','#3affd5','#0a0a0a'],
+  sovereign: ['#b04a2f','#3d5a3a','#ece4d2'],
+  commons:   ['#1f2a22','#7a8c5a','#f1ece1'],
+  vellum:    ['#7b3a2d','#c08a6b','#efe6d4']
 };
 ui.palLib.addEventListener('change',()=>{
   const v=ui.palLib.value;if(!v)return;
@@ -374,7 +405,10 @@ const PRESETS={
     mods:['stars','strar','dot','sq','rings']},
   poster:{cA:'#ff5a3c',cB:'#2bbf94',cP:'#f4efe6',blend:'multiply',glow:0,grain:20,
     misreg:2,layout:'grid',n:9,gr:3,gc:3,crop:true,corpus:'mixed',
-    mods:['hex','tri','mesh','pix','net','tab','dglis','dgfun','rings']}
+    mods:['hex','tri','mesh','pix','net','tab','dglis','dgfun','rings']},
+  cwsa:{cA:'#b04a2f',cB:'#3d5a3a',cP:'#ece4d2',blend:'multiply',glow:0,grain:28,
+    misreg:1,layout:'grid',n:9,gr:3,gc:3,crop:true,corpus:'sovereignty',
+    mods:['dgtip','dgpan','dgwall','dgfed','dgsiph','dgseed','dgthr','dgman','dgerod']}
 };
 function applyPreset(name){
   const p=PRESETS[name];if(!p)return;
@@ -404,8 +438,8 @@ window.addEventListener('keydown',e=>{
   if(e.code==='Space'){e.preventDefault();draw()}
   if(e.key==='s'||e.key==='S'){ui.seed.value='r-'+Math.random().toString(36).slice(2,8);draw()}
   if(e.key==='e'||e.key==='E'){exportPNG(1)}
-  const presets=['riso','crt','hud','swiss','diagram','cyber','blueprint','poster'];
-  const idx=parseInt(e.key);if(idx>=1&&idx<=8)applyPreset(presets[idx-1]);
+  const presets=['riso','crt','hud','swiss','diagram','cyber','blueprint','poster','cwsa'];
+  const idx=parseInt(e.key);if(idx>=1&&idx<=9)applyPreset(presets[idx-1]);
 });
 
 /* ---------- color helpers ---------- */
@@ -424,6 +458,24 @@ const CORPORA={
   numbers:['390','568','854','408','228','40','120','46','30','24','142','60','6','16','32'],
   poetic:['silence','threshold','signal','horizon','remnant','echo','vapor','wake','pulse','ember','quiet','traces'],
   constellation:['LYRA','VEGA','SIRIUS','ORION','CYGNUS','DRACO','LEO','CARINA','PUPPIS','VELA','PYXIS','VIRGO'],
+  sovereignty:['reclaim','sunset','federate','sovereign','protocol','commons','root','mesh','plurality','tipping','threshold','restart','hands','ground','repair','tend','sever','plant','kindle','dwell','refuse','unmake','remake','mend','quiet','seed','return','undo','small','slow'],
+  manifesto:[
+    'Can we start again?',
+    'The garden has walls.',
+    'Sunset the platform.',
+    'Return the protocol.',
+    'Plurality, not platform.',
+    'There is still ground beneath.',
+    'Federate. Refuse. Tend.',
+    'Begin with hands.',
+    'A smaller weather.',
+    'Undo, gently.',
+    'No single root.',
+    'Salvage the commons.',
+    'Slow software.',
+    'Hold the seed.'
+  ],
+  oligarchy:['PLATFORM','MOAT','WALLED','CAPTURE','RENT','EXTRACT','MONOPOLY','ENCLOSURE','LOCK-IN','TRACE','TARIFF','SCRAPE','OPT-OUT','MERGE','TAKE-OVER'],
   mixed:[]
 };
 function corpus(){
@@ -1390,6 +1442,390 @@ function modDotOrbit(box,col){
 }
 
 /* ============================================================
+   CAN WE START AGAIN? — exhibition modules
+   Restrained scientific-poster diagrams exploring the
+   tipping point of digital culture and possible repair.
+============================================================ */
+
+/* Tipping point: a beam past balance, a sphere falling off */
+function modDgTip(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  const cx=box.x+box.w/2, cy=box.y+box.h*.55;
+  const armLen=box.w*.38;
+  /* tipped past equilibrium */
+  const angle=rnd(-.55,-.32);
+  const dx=Math.cos(angle)*armLen, dy=Math.sin(angle)*armLen;
+  ctx.save();
+  /* faint horizon (where balance was) */
+  strokeInk(inkA,.35,1);ctx.setLineDash([3,5]);
+  ctx.beginPath();ctx.moveTo(cx-armLen-20,cy);ctx.lineTo(cx+armLen+20,cy);ctx.stroke();
+  ctx.setLineDash([]);
+  /* beam */
+  strokeInk(inkB,.95,1.6);
+  ctx.beginPath();ctx.moveTo(cx-dx,cy-dy);ctx.lineTo(cx+dx,cy+dy);ctx.stroke();
+  /* fulcrum triangle */
+  fillInk(inkA,.95);
+  ctx.beginPath();ctx.moveTo(cx,cy+2);
+  ctx.lineTo(cx-14,cy+24);ctx.lineTo(cx+14,cy+24);ctx.closePath();ctx.fill();
+  /* angle arc */
+  strokeInk(inkA,.7,1);
+  ctx.beginPath();ctx.arc(cx,cy,armLen*.35,0,angle,true);ctx.stroke();
+  /* sphere falling from low end */
+  fillInk(inkB,.95);
+  const bx=cx+dx*1.05+rnd(8,40), by=cy+dy*1.05+rnd(8,40);
+  ctx.beginPath();ctx.arc(bx,by,7,0,Math.PI*2);ctx.fill();
+  /* trail */
+  strokeInk(inkB,.4,.8);ctx.setLineDash([1,4]);
+  ctx.beginPath();ctx.moveTo(cx+dx,cy+dy);
+  ctx.quadraticCurveTo((cx+dx+bx)/2,by,bx,by);ctx.stroke();
+  ctx.setLineDash([]);
+  /* label dots at ends */
+  fillInk(inkA,1);
+  ctx.beginPath();ctx.arc(cx-dx,cy-dy,3,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+
+/* Panopticon: concentric watched cells around a central eye */
+function modDgPan(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  const cx=box.x+box.w/2, cy=box.y+box.h/2;
+  const R=Math.min(box.w,box.h)*.42;
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  /* rings of cells */
+  const rings=3;
+  strokeInk(inkB,.85,1);
+  for(let k=1;k<=rings;k++){
+    const r=R*k/rings;
+    const cells=8+k*4;
+    for(let i=0;i<cells;i++){
+      const a0=(i/cells)*Math.PI*2, a1=((i+1)/cells)*Math.PI*2;
+      ctx.beginPath();
+      ctx.arc(cx,cy,r,a0+.03,a1-.03);ctx.stroke();
+      /* radial separators */
+      const r0=R*(k-1)/rings;
+      ctx.beginPath();
+      ctx.moveTo(cx+Math.cos(a0)*r0,cy+Math.sin(a0)*r0);
+      ctx.lineTo(cx+Math.cos(a0)*r,cy+Math.sin(a0)*r);ctx.stroke();
+    }
+  }
+  /* sight lines (faint) from center to a few cells */
+  strokeInk(inkA,.4,.8);
+  const lines=rint(10,18);
+  for(let i=0;i<lines;i++){
+    const a=rng()*Math.PI*2;
+    ctx.beginPath();ctx.moveTo(cx,cy);
+    ctx.lineTo(cx+Math.cos(a)*R*.95,cy+Math.sin(a)*R*.95);ctx.stroke();
+  }
+  /* central eye */
+  fillInk(inkA,.95);strokeInk(inkA,.95,1.4);
+  ctx.beginPath();
+  ctx.ellipse(cx,cy,R*.18,R*.09,0,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,R*.06,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+
+/* Walled garden: top-down enclosure, dots trapped inside vs free outside */
+function modDgWall(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  const pad=Math.min(box.w,box.h)*.12;
+  const ix=box.x+pad, iy=box.y+pad;
+  const iw=box.w-pad*2, ih=box.h-pad*2;
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  /* outer perspective wall stroke */
+  strokeInk(inkB,.95,1.5);
+  ctx.beginPath();ctx.rect(ix,iy,iw,ih);ctx.stroke();
+  /* inner secondary wall */
+  strokeInk(inkB,.55,1);
+  ctx.beginPath();ctx.rect(ix+6,iy+6,iw-12,ih-12);ctx.stroke();
+  /* wall ticks (battlement marks) */
+  const tick=14;
+  for(let x=ix;x<ix+iw;x+=tick){
+    ctx.beginPath();ctx.moveTo(x,iy);ctx.lineTo(x,iy-5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x,iy+ih);ctx.lineTo(x,iy+ih+5);ctx.stroke();
+  }
+  for(let y=iy;y<iy+ih;y+=tick){
+    ctx.beginPath();ctx.moveTo(ix,y);ctx.lineTo(ix-5,y);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(ix+iw,y);ctx.lineTo(ix+iw+5,y);ctx.stroke();
+  }
+  /* gate: paint outwards posts in Ink A on the upper edge — suggests opening */
+  strokeInk(inkA,.95,1.6);
+  const gw=20, gx=ix+iw/2;
+  ctx.beginPath();
+  ctx.moveTo(gx-gw/2,iy-12);ctx.lineTo(gx-gw/2,iy+2);
+  ctx.moveTo(gx+gw/2,iy-12);ctx.lineTo(gx+gw/2,iy+2);ctx.stroke();
+  /* small lintel */
+  ctx.beginPath();ctx.moveTo(gx-gw/2-2,iy-12);ctx.lineTo(gx+gw/2+2,iy-12);ctx.stroke();
+  /* dots inside (enclosed population) */
+  fillInk(inkA,.9);
+  const inN=rint(40,90);
+  for(let i=0;i<inN;i++){
+    const x=ix+rnd(8,iw-8), y=iy+rnd(8,ih-8);
+    ctx.beginPath();ctx.arc(x,y,1.6,0,Math.PI*2);ctx.fill();
+  }
+  /* sparse outside dots (those who left, or never entered) */
+  fillInk(inkA,.6);
+  const outN=rint(6,14);
+  for(let i=0;i<outN;i++){
+    let x,y,tries=0;
+    do{x=box.x+rnd(0,box.w);y=box.y+rnd(0,box.h);tries++}
+    while(x>ix-2&&x<ix+iw+2&&y>iy-2&&y<iy+ih+2&&tries<20);
+    ctx.beginPath();ctx.arc(x,y,1.4,0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* Federation: star topology beside mesh topology (the choice) */
+function modDgFed(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  const cy=box.y+box.h/2;
+  const halfW=box.w/2-8;
+  const r=Math.min(halfW,box.h)*.35;
+
+  /* LEFT: star (centralized) */
+  const lx=box.x+halfW/2+8, ly=cy;
+  strokeInk(inkA,.9,1.2);
+  const spokes=10;
+  const sp=[];
+  for(let i=0;i<spokes;i++){
+    const a=i/spokes*Math.PI*2;
+    sp.push({x:lx+Math.cos(a)*r,y:ly+Math.sin(a)*r});
+  }
+  for(const p of sp){ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);ctx.stroke()}
+  fillInk(inkA,1);
+  ctx.beginPath();ctx.arc(lx,ly,5,0,Math.PI*2);ctx.fill();
+  fillInk(inkA,.85);
+  for(const p of sp){ctx.beginPath();ctx.arc(p.x,p.y,2.2,0,Math.PI*2);ctx.fill()}
+
+  /* divider — a faint vertical line */
+  strokeInk(inkA,.25,1);ctx.setLineDash([2,5]);
+  ctx.beginPath();ctx.moveTo(box.x+box.w/2,box.y+12);
+  ctx.lineTo(box.x+box.w/2,box.y+box.h-12);ctx.stroke();
+  ctx.setLineDash([]);
+
+  /* RIGHT: mesh (federated) — every node to every node-ish */
+  const rx=box.x+box.w-halfW/2-8, ry=cy;
+  const meshN=8;
+  const mp=[];
+  for(let i=0;i<meshN;i++){
+    const a=i/meshN*Math.PI*2+.2;
+    mp.push({x:rx+Math.cos(a)*r,y:ry+Math.sin(a)*r});
+  }
+  strokeInk(inkB,.7,1);
+  for(let i=0;i<meshN;i++)for(let j=i+1;j<meshN;j++){
+    ctx.beginPath();ctx.moveTo(mp[i].x,mp[i].y);ctx.lineTo(mp[j].x,mp[j].y);ctx.stroke();
+  }
+  fillInk(inkB,1);
+  for(const p of mp){ctx.beginPath();ctx.arc(p.x,p.y,3.4,0,Math.PI*2);ctx.fill()}
+
+  /* small labels under each topology */
+  ctx.fillStyle=rgba(inkA,.85);
+  ctx.font='600 9px "IBM Plex Mono",monospace';ctx.textAlign='center';
+  ctx.fillText('— now —',lx,box.y+box.h-6);
+  ctx.fillStyle=rgba(inkB,.85);
+  ctx.fillText('— possible —',rx,box.y+box.h-6);
+  ctx.textAlign='start';
+  ctx.restore();
+}
+
+/* Data siphon: many small sources funneling into one drain */
+function modDgSiph(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  const cx=box.x+box.w*.78, cy=box.y+box.h*.55;
+  /* drain (large circle) */
+  strokeInk(inkA,.95,1.6);fillInk(inkA,.12);
+  const R=Math.min(box.w,box.h)*.18;
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();ctx.stroke();
+  /* inner concentric */
+  strokeInk(inkA,.55,1);
+  ctx.beginPath();ctx.arc(cx,cy,R*.6,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,R*.25,0,Math.PI*2);ctx.stroke();
+  /* sources scattered on the left */
+  const n=rint(18,32);
+  fillInk(inkB,.85);
+  const sources=[];
+  for(let i=0;i<n;i++){
+    const sx=box.x+rnd(box.w*.05,box.w*.55);
+    const sy=box.y+rnd(box.h*.1,box.h*.9);
+    sources.push({x:sx,y:sy});
+    ctx.beginPath();ctx.arc(sx,sy,2,0,Math.PI*2);ctx.fill();
+  }
+  /* curved arrows toward drain */
+  strokeInk(inkB,.55,1);fillInk(inkB,1);
+  for(const s of sources){
+    const ang=Math.atan2(cy-s.y,cx-s.x);
+    const ex=cx-Math.cos(ang)*R-2, ey=cy-Math.sin(ang)*R-2;
+    const mx=(s.x+ex)/2+rnd(-20,20), my=(s.y+ey)/2+rnd(-20,20);
+    ctx.beginPath();ctx.moveTo(s.x,s.y);
+    ctx.quadraticCurveTo(mx,my,ex,ey);ctx.stroke();
+    /* arrowhead */
+    const aa=Math.atan2(ey-my,ex-mx);
+    ctx.beginPath();ctx.moveTo(ex,ey);
+    ctx.lineTo(ex-Math.cos(aa-.45)*5,ey-Math.sin(aa-.45)*5);
+    ctx.lineTo(ex-Math.cos(aa+.45)*5,ey-Math.sin(aa+.45)*5);
+    ctx.closePath();ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* Seed / return: a circular arrow wrapping a seed, with quiet sprouts */
+function modDgSeed(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  const cx=box.x+box.w/2, cy=box.y+box.h*.6;
+  const r=Math.min(box.w,box.h)*.22;
+  ctx.save();
+  /* horizon ground line */
+  strokeInk(inkA,.6,1);
+  ctx.beginPath();ctx.moveTo(box.x+box.w*.1,cy+r+8);
+  ctx.lineTo(box.x+box.w*.9,cy+r+8);ctx.stroke();
+  /* return-arrow circle (open gap with arrowhead) */
+  strokeInk(inkB,.95,1.6);fillInk(inkB,1);
+  const gapStart=-Math.PI*.55, gapEnd=Math.PI*1.45;
+  ctx.beginPath();ctx.arc(cx,cy,r,gapStart,gapEnd);ctx.stroke();
+  /* arrowhead at end of arc */
+  const ang=gapEnd;
+  const ex=cx+Math.cos(ang)*r, ey=cy+Math.sin(ang)*r;
+  const tang=ang+Math.PI/2;
+  ctx.beginPath();ctx.moveTo(ex,ey);
+  ctx.lineTo(ex+Math.cos(tang-.45)*9,ey+Math.sin(tang-.45)*9);
+  ctx.lineTo(ex+Math.cos(tang+.45)*9,ey+Math.sin(tang+.45)*9);
+  ctx.closePath();ctx.fill();
+  /* seed at center */
+  fillInk(inkA,1);
+  ctx.beginPath();
+  ctx.ellipse(cx,cy,5,8,0,0,Math.PI*2);ctx.fill();
+  /* sprouts upward */
+  strokeInk(inkA,.85,1.2);
+  const sprouts=rint(2,4);
+  for(let i=0;i<sprouts;i++){
+    const offX=(i-(sprouts-1)/2)*7;
+    ctx.beginPath();
+    ctx.moveTo(cx+offX,cy-4);
+    ctx.quadraticCurveTo(cx+offX+rnd(-8,8),cy-r*.7,cx+offX+rnd(-12,12),cy-r);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* Threshold curve: sigmoid crossing a labeled threshold line */
+function modDgThr(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  ctx.save();
+  const x0=box.x+box.w*.1, x1=box.x+box.w*.9;
+  const y0=box.y+box.h*.85, y1=box.y+box.h*.15;
+  const yMid=(y0+y1)/2;
+  /* axes */
+  strokeInk(inkA,.85,1);fillInk(inkA,1);
+  ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1+10,y0);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x0,y1-10);ctx.stroke();
+  /* arrowheads */
+  ctx.beginPath();ctx.moveTo(x1+10,y0);
+  ctx.lineTo(x1+4,y0-4);ctx.lineTo(x1+4,y0+4);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(x0,y1-10);
+  ctx.lineTo(x0-4,y1-4);ctx.lineTo(x0+4,y1-4);ctx.closePath();ctx.fill();
+  /* threshold dashed line */
+  strokeInk(inkA,.55,1);ctx.setLineDash([4,5]);
+  ctx.beginPath();ctx.moveTo(x0,yMid);ctx.lineTo(x1+10,yMid);ctx.stroke();
+  ctx.setLineDash([]);
+  /* sigmoid */
+  strokeInk(inkB,.95,1.8);
+  ctx.beginPath();
+  const N=160;
+  for(let i=0;i<=N;i++){
+    const u=i/N;
+    const x=x0+u*(x1-x0);
+    const s=1/(1+Math.exp(-(u-.5)*10));
+    const y=y0+(y1-y0)*s;
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  }
+  ctx.stroke();
+  /* inflection dot */
+  fillInk(inkB,1);
+  ctx.beginPath();ctx.arc(x0+.5*(x1-x0),yMid,4,0,Math.PI*2);ctx.fill();
+  /* labels */
+  ctx.fillStyle=rgba(inkA,.85);
+  ctx.font='600 10px "IBM Plex Mono",monospace';
+  ctx.fillText('threshold',x0+8,yMid-4);
+  ctx.fillText('here →',x0+.5*(x1-x0)+8,yMid+14);
+  ctx.restore();
+}
+
+/* Manifesto block: large quoted text, line-broken like a poem */
+function modDgMan(box,col){
+  const ink=hexToRgb(col);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  /* opening rule */
+  strokeInk(ink,.9,1.4);
+  ctx.beginPath();ctx.moveTo(box.x+8,box.y+12);
+  ctx.lineTo(box.x+Math.min(60,box.w*.2),box.y+12);ctx.stroke();
+  /* text lines */
+  ctx.fillStyle=rgba(ink,.95);
+  const size=Math.max(13,Math.min(box.w/22,28));
+  ctx.font=`600 ${Math.floor(size)}px "IBM Plex Mono",monospace`;
+  const lh=Math.floor(size*1.45);
+  /* pull from manifesto corpus regardless of UI corpus (theme-locked) */
+  const lines=CORPORA.manifesto.slice();
+  /* shuffle, take 3–5 */
+  for(let i=lines.length-1;i>0;i--){
+    const j=Math.floor(rng()*(i+1));[lines[i],lines[j]]=[lines[j],lines[i]];
+  }
+  const take=rint(3,Math.min(5,Math.floor((box.h-50)/lh)));
+  let y=box.y+30+lh;
+  for(let i=0;i<take;i++){
+    ctx.fillText(lines[i],box.x+12,y);
+    y+=lh;
+  }
+  /* closing rule + attribution */
+  strokeInk(ink,.6,1);
+  ctx.beginPath();ctx.moveTo(box.x+8,y+4);
+  ctx.lineTo(box.x+box.w-12,y+4);ctx.stroke();
+  ctx.font='600 9px "IBM Plex Mono",monospace';
+  ctx.fillStyle=rgba(ink,.75);
+  ctx.fillText('— Can we start again?  ·  exhibition leaflet',box.x+12,y+18);
+  ctx.restore();
+}
+
+/* Erosion grid: a pixel field where chunks are missing — past the point */
+function modDgErod(box,col){
+  const ink=hexToRgb(col);
+  const s=rnd(10,16);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  /* faint grid */
+  strokeInk(ink,.3,1);
+  for(let x=box.x;x<box.x+box.w;x+=s){
+    ctx.beginPath();ctx.moveTo(x,box.y);ctx.lineTo(x,box.y+box.h);ctx.stroke()}
+  for(let y=box.y;y<box.y+box.h;y+=s){
+    ctx.beginPath();ctx.moveTo(box.x,y);ctx.lineTo(box.x+box.w,y);ctx.stroke()}
+  /* erosion gradient: dense block on one side, scattered on other */
+  const cols=Math.floor(box.w/s), rows=Math.floor(box.h/s);
+  fillInk(ink,.9);
+  /* erosion direction (left→right or right→left) */
+  const flip=chance(.5);
+  for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){
+    const u=flip?(1-i/cols):(i/cols);
+    /* fall-off with slight noise */
+    const p=Math.pow(u,2)+(rng()-.5)*.18;
+    if(p>.55)ctx.fillRect(box.x+i*s+1,box.y+j*s+1,s-2,s-2);
+  }
+  /* small scatter of stragglers on the eroded side */
+  for(let k=0;k<rint(6,18);k++){
+    const i=flip?rint(0,cols/3):rint(cols*2/3,cols-1);
+    const j=rint(0,rows-1);
+    if(chance(.5))ctx.fillRect(box.x+i*s+1,box.y+j*s+1,s-2,s-2);
+  }
+  /* fissure: a thin diagonal break */
+  ctx.save();ctx.globalCompositeOperation='destination-out';
+  ctx.fillStyle='#000';
+  const fx=box.x+box.w*rnd(.35,.6);
+  ctx.beginPath();
+  ctx.moveTo(fx,box.y);ctx.lineTo(fx+rnd(-30,30),box.y+box.h);
+  ctx.lineTo(fx+rnd(-30,30)+8,box.y+box.h);ctx.lineTo(fx+8,box.y);ctx.closePath();ctx.fill();
+  ctx.restore();
+  ctx.restore();
+}
+
+/* ============================================================
    GRAIN + CROP MARKS
 ============================================================ */
 
@@ -1435,8 +1871,8 @@ function drawCropMarks(W,H){
 ============================================================ */
 
 function assignLayer(kind){
-  const A_pref=['tri','pix','tab','typ','osc','label','head','cube','parts','state','step','phase','dgvec','dghour','dglis','stars','strar','dot'];
-  const B_pref=['hex','net','mesh','stream','rings','flow','dgcage','dgfun','dghel'];
+  const A_pref=['tri','pix','tab','typ','osc','label','head','cube','parts','state','step','phase','dgvec','dghour','dglis','stars','strar','dot','dgtip','dgman','dgthr','dgseed','dgerod'];
+  const B_pref=['hex','net','mesh','stream','rings','flow','dgcage','dgfun','dghel','dgpan','dgwall','dgfed','dgsiph'];
   if(A_pref.includes(kind))return chance(.85)?'A':'B';
   if(B_pref.includes(kind))return chance(.85)?'B':'A';
   return chance(.5)?'A':'B';
@@ -1474,6 +1910,15 @@ function drawModule(kind,box,layer){
     case 'stars':modStars(box,col);break;
     case 'strar':modStringArt(box,col);break;
     case 'dot':modDotOrbit(box,col);break;
+    case 'dgtip':modDgTip(box,colA,colB);break;
+    case 'dgpan':modDgPan(box,colA,colB);break;
+    case 'dgwall':modDgWall(box,colA,colB);break;
+    case 'dgfed':modDgFed(box,colA,colB);break;
+    case 'dgsiph':modDgSiph(box,colA,colB);break;
+    case 'dgseed':modDgSeed(box,colA,colB);break;
+    case 'dgthr':modDgThr(box,colA,colB);break;
+    case 'dgman':modDgMan(box,col);break;
+    case 'dgerod':modDgErod(box,col);break;
   }
 }
 
