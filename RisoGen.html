@@ -149,6 +149,17 @@
   .text-ctrl .align-row button{flex:1;background:#0e0e0e;border:1px solid #2a2a2a;
     color:var(--muted);padding:4px;font-family:inherit;font-size:11px;cursor:pointer}
   .text-ctrl .align-row button.on{background:var(--accent);color:#111;border-color:var(--accent)}
+  /* module (icon) editor block */
+  .mod-ctrl{border-top:1px solid #000;padding-top:10px;margin-top:10px}
+  .mod-ctrl .ttl{font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:8px}
+  .mod-ctrl label{display:flex;justify-content:space-between;align-items:center;
+    gap:6px;margin:4px 0;color:var(--muted);font-size:10.5px}
+  .mod-ctrl input[type=color]{width:34px;height:22px;border:1px solid #2a2a2a;
+    background:transparent;cursor:pointer;padding:0}
+  .mod-ctrl .btn-row{margin-top:8px;gap:4px;display:flex}
+  .mod-ctrl .btn-row button{flex:1;padding:6px 6px;font-size:10px}
+  .mod-ctrl .mc-note{color:var(--muted);font-size:9.5px;margin-top:6px;line-height:1.4}
 </style>
 </head>
 <body>
@@ -365,6 +376,10 @@
         <button id="soloDraw" class="alt">Preview solo</button>
         <button id="soloExport">Export solo PNG</button>
       </div>
+      <div class="btn-row">
+        <button id="soloExportTransparent">Export transparent PNG</button>
+      </div>
+      <div class="foot" style="margin-top:6px">Transparent export: no paper, no grain, auto-cropped to content + glow halo.</div>
     </div>
 
     <div class="group">
@@ -459,6 +474,17 @@
         </select>
       </label>
 
+      <div class="mod-ctrl" id="modControls" style="display:none">
+        <div class="ttl">Module</div>
+        <label>Ink A <input id="lInkA" type="color"></label>
+        <label>Ink B <input id="lInkB" type="color"></label>
+        <div class="btn-row">
+          <button id="lRegen">Re-roll dice</button>
+          <button id="lInkReset" class="alt">Use global inks</button>
+        </div>
+        <div class="mc-note">Re-roll keeps the position and size but rolls a new layout for this module. Inks override the global palette for this layer only.</div>
+      </div>
+
       <div class="text-ctrl" id="textControls" style="display:none">
         <div class="ttl">Text</div>
         <label class="full">Content
@@ -522,9 +548,16 @@ function xmur3(str){let h=1779033703^str.length;
     h=h<<13|h>>>19}
   return function(){h=Math.imul(h^(h>>>16),2246822507);
     h=Math.imul(h^(h>>>13),3266489909);return (h^=h>>>16)>>>0}}
-function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;
-  let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;
-  return ((t^t>>>14)>>>0)/4294967296}}
+function mulberry32(a){
+  const state={a};
+  const f=function(){
+    state.a|=0;state.a=state.a+0x6D2B79F5|0;
+    let t=Math.imul(state.a^state.a>>>15,1|state.a);
+    t=t+Math.imul(t^t>>>7,61|t)^t;
+    return ((t^t>>>14)>>>0)/4294967296;
+  };
+  f.state=state;return f;
+}
 let rng=Math.random;
 function setSeed(s){const h=xmur3(s);rng=mulberry32(h())}
 const rnd=(a=1,b)=>b===undefined?rng()*a:a+rng()*(b-a);
@@ -618,6 +651,7 @@ $('export').onclick=()=>exportPNG(1);
 $('exportHi').onclick=()=>exportPNG(2);
 $('soloDraw').onclick=()=>drawSolo(false);
 $('soloExport').onclick=()=>drawSolo(true);
+$('soloExportTransparent').onclick=drawSoloTransparent;
 $('exportPSD').onclick=()=>exportPSD();
 
 /* ---------- palette library ---------- */
@@ -2509,8 +2543,9 @@ function assignLayer(kind){
   return chance(.5)?'A':'B';
 }
 
-function drawModule(kind,box,layer){
-  const colA=ui.cA.value,colB=ui.cB.value;
+function drawModule(kind,box,layer,override){
+  const colA=(override&&override.inkA)||ui.cA.value;
+  const colB=(override&&override.inkB)||ui.cB.value;
   const col=layer==='A'?colA:colB;
   switch(kind){
     case 'hex':modHex(box,col);break;
@@ -2655,6 +2690,67 @@ function drawSolo(forExport){
     a.href=cv.toDataURL('image/png');a.click();
     setTimeout(draw,150);  /* restore main composition */
   }
+}
+
+/* Scan alpha channel to find the rectangular bounds of non-transparent
+   pixels. Used to auto-crop transparent solo exports. */
+function findContentBounds(canvas){
+  const w=canvas.width, h=canvas.height;
+  const data=canvas.getContext('2d').getImageData(0,0,w,h).data;
+  let minX=w, minY=h, maxX=-1, maxY=-1;
+  for(let y=0;y<h;y++){
+    const row=y*w*4;
+    for(let x=0;x<w;x++){
+      if(data[row+x*4+3]>0){
+        if(x<minX)minX=x;
+        if(x>maxX)maxX=x;
+        if(y<minY)minY=y;
+        if(y>maxY)maxY=y;
+      }
+    }
+  }
+  if(maxX<0)return null;
+  return {x:minX, y:minY, w:maxX-minX+1, h:maxY-minY+1};
+}
+
+function drawSoloTransparent(){
+  const kind=ui.solo.value;
+  if(!kind){alert('Pick a module from the Solo dropdown first.');return}
+  setSeed(ui.seed.value||'riso');
+  const W=+ui.w.value, H=+ui.h.value;
+  const pad=Math.min(W,H)*.08;
+  const box={x:pad,y:pad,w:W-pad*2,h:H-pad*2};
+
+  /* draw onto a temp canvas so the main viewport isn't disturbed */
+  const tmp=document.createElement('canvas');
+  tmp.width=W; tmp.height=H;
+  const oldCtx=ctx;
+  ctx=tmp.getContext('2d');
+
+  const glow=+ui.gl.value;
+  if(glow>0){ctx.shadowBlur=glow;ctx.shadowColor=rgba(hexToRgb(ui.cA.value),.9)}
+  /* source-over so marks appear on the transparent canvas
+     (multiply/lighter against transparent yields nothing) */
+  ctx.globalCompositeOperation='source-over';
+  drawModule(kind,box,assignLayer(kind));
+  ctx.shadowBlur=0;
+  ctx=oldCtx;
+
+  /* tight-crop to the alpha bounding box (includes glow halo) */
+  const bounds=findContentBounds(tmp);
+  let outCanvas=tmp;
+  if(bounds){
+    const c=document.createElement('canvas');
+    c.width=bounds.w; c.height=bounds.h;
+    c.getContext('2d').drawImage(tmp,
+      bounds.x,bounds.y,bounds.w,bounds.h,
+      0,0,bounds.w,bounds.h);
+    outCanvas=c;
+  }
+  const a=document.createElement('a');
+  a.download=`risogen-${kind}-${ui.seed.value}-transparent.png`;
+  a.href=outCanvas.toDataURL('image/png');
+  a.click();
 }
 
 function exportPNG(scale){
@@ -2822,6 +2918,9 @@ function exportPSD(){
   }
 
   const blendKey=PS_BLEND[ui.blend.value]||'norm';
+  const glow=+ui.gl.value;
+  const glowPad=glow>0?Math.ceil(glow*2.5):0;
+  const glowColor=rgba(hexToRgb(ui.cA.value),.9);
   const layers=[];
 
   /* Bottom: paper */
@@ -2837,23 +2936,26 @@ function exportPSD(){
     });
   }
 
-  /* Render one module → offscreen canvas matching its box, clipped */
+  /* Render one module → offscreen canvas matching its box (+ glow padding) */
   const renderModule=(p,ox,oy,idx)=>{
-    const lw=Math.max(1,Math.ceil(p.box.w));
-    const lh=Math.max(1,Math.ceil(p.box.h));
+    const innerW=Math.max(1,Math.ceil(p.box.w));
+    const innerH=Math.max(1,Math.ceil(p.box.h));
+    const lw=innerW+glowPad*2;
+    const lh=innerH+glowPad*2;
     const cnv=document.createElement('canvas');
     cnv.width=lw;cnv.height=lh;
     const lctx=cnv.getContext('2d');
-    /* swap global ctx so module functions draw here */
     ctx=lctx;
     lctx.save();
-    lctx.translate(-p.box.x,-p.box.y);
+    /* shift drawing by glowPad so the box sits at (glowPad,glowPad) in the canvas */
+    lctx.translate(-p.box.x+glowPad,-p.box.y+glowPad);
+    if(glow>0){lctx.shadowBlur=glow;lctx.shadowColor=glowColor}
     drawModule(p.kind,p.box,p.layer);
     lctx.restore();
     const data=lctx.getImageData(0,0,lw,lh).data;
     ctx=mainCtx;
-    const top=Math.floor(p.box.y+oy);
-    const left=Math.floor(p.box.x+ox);
+    const top=Math.floor(p.box.y+oy)-glowPad;
+    const left=Math.floor(p.box.x+ox)-glowPad;
     layers.push({
       name:`${String(idx).padStart(2,'0')} ${MODULE_LABELS[p.kind]||p.kind} [${p.layer}]`,
       blendMode:blendKey,opacity:1,
@@ -2915,7 +3017,11 @@ function exportPSDFromScene(){
     });
   }
 
-  /* Each scene layer → its rotated/scaled raster, clipped to AABB */
+  const glow=+ui.gl.value;
+  const glowPad=glow>0?Math.ceil(glow*2.5):0;
+  const glowColor=rgba(hexToRgb(ui.cA.value),.9);
+
+  /* Each scene layer → its rotated/scaled raster, clipped to AABB (+ glow pad) */
   for(const L of scene.layers){
     /* axis-aligned bbox of the transformed quad */
     const corners=[
@@ -2924,10 +3030,10 @@ function exportPSDFromScene(){
     const c=Math.cos(L.rotation), s=Math.sin(L.rotation);
     const wp=corners.map(p=>({x:L.cx+p.x*c-p.y*s, y:L.cy+p.x*s+p.y*c}));
     const xs=wp.map(p=>p.x), ys=wp.map(p=>p.y);
-    const left=Math.floor(Math.min(...xs));
-    const top=Math.floor(Math.min(...ys));
-    const right=Math.ceil(Math.max(...xs));
-    const bottom=Math.ceil(Math.max(...ys));
+    const left=Math.floor(Math.min(...xs))-glowPad;
+    const top=Math.floor(Math.min(...ys))-glowPad;
+    const right=Math.ceil(Math.max(...xs))+glowPad;
+    const bottom=Math.ceil(Math.max(...ys))+glowPad;
     const lw=Math.max(1,right-left), lh=Math.max(1,bottom-top);
 
     const cnv=document.createElement('canvas');
@@ -2936,6 +3042,7 @@ function exportPSDFromScene(){
     c2.translate(L.cx-left, L.cy-top);
     c2.rotate(L.rotation);
     c2.scale(L.w/L.cache.width, L.h/L.cache.height);
+    if(glow>0){c2.shadowBlur=glow;c2.shadowColor=glowColor}
     /* don't bake opacity — let Photoshop apply layer opacity */
     c2.drawImage(L.cache, -L.cache.width/2, -L.cache.height/2);
 
@@ -3017,7 +3124,7 @@ function buildPlanForEdit(W,H,enabled){
   return plan;
 }
 
-function rasterizeModuleToCanvas(kind,box,layerKey){
+function rasterizeModuleToCanvas(kind,box,layerKey,override){
   const lw=Math.max(1,Math.ceil(box.w));
   const lh=Math.max(1,Math.ceil(box.h));
   const cnv=document.createElement('canvas');
@@ -3025,14 +3132,17 @@ function rasterizeModuleToCanvas(kind,box,layerKey){
   const oldCtx=ctx;
   ctx=cnv.getContext('2d');
   ctx.save();ctx.translate(-box.x,-box.y);
-  drawModule(kind,box,layerKey);
+  drawModule(kind,box,layerKey,override);
   ctx.restore();
   ctx=oldCtx;
   return cnv;
 }
 
 function makeLayer(kind,box,layerKey,idx,name){
-  const cnv=rasterizeModuleToCanvas(kind,box,layerKey);
+  /* snapshot rng state BEFORE rendering so we can reproduce this
+     exact composition later (for recolor without changing layout) */
+  const seedState=(rng&&rng.state)?rng.state.a:0;
+  const cnv=rasterizeModuleToCanvas(kind,box,layerKey,null);
   return {
     id:scene.nextId++, kind, layerKey,
     cx:box.x+box.w/2, cy:box.y+box.h/2,
@@ -3040,8 +3150,26 @@ function makeLayer(kind,box,layerKey,idx,name){
     blendMode:ui.blend.value, opacity:1,
     visible:true, locked:false,
     name:name||`${String(idx).padStart(2,'0')} ${MODULE_LABELS[kind]||kind} [${layerKey}]`,
-    cache:cnv, nativeW:cnv.width, nativeH:cnv.height
+    cache:cnv, nativeW:cnv.width, nativeH:cnv.height,
+    inkA:null, inkB:null, seedState
   };
+}
+
+function recolorLayer(L){
+  /* re-render with same seed → same layout, new ink colors */
+  if(rng&&rng.state&&typeof L.seedState==='number')rng.state.a=L.seedState;
+  const box={x:0,y:0,w:L.nativeW,h:L.nativeH};
+  L.cache=rasterizeModuleToCanvas(L.kind,box,L.layerKey,{inkA:L.inkA,inkB:L.inkB});
+}
+
+function regenerateLayer(L){
+  /* fresh rng state → new layout, current colors preserved */
+  if(!rng||!rng.state)setSeed(ui.seed.value||'riso');
+  const newState=(Math.random()*4294967296)|0;
+  rng.state.a=newState;
+  L.seedState=newState;
+  const box={x:0,y:0,w:L.nativeW,h:L.nativeH};
+  L.cache=rasterizeModuleToCanvas(L.kind,box,L.layerKey,{inkA:L.inkA,inkB:L.inkB});
 }
 
 function openLayersPanel(){
@@ -3122,11 +3250,18 @@ function compositeScene(){
 
   ctx.fillStyle=ui.cP.value;ctx.fillRect(0,0,W,H);
 
+  const glow=+ui.gl.value;
+  const glowColor=rgba(hexToRgb(ui.cA.value),.9);
+
   for(const L of scene.layers){
     if(!L.visible)continue;
     ctx.save();
     ctx.globalCompositeOperation=L.blendMode;
     ctx.globalAlpha=L.opacity;
+    if(glow>0){
+      ctx.shadowBlur=glow;
+      ctx.shadowColor=glowColor;
+    }
     ctx.translate(L.cx,L.cy);
     ctx.rotate(L.rotation);
     const sx=L.w/L.cache.width, sy=L.h/L.cache.height;
@@ -3136,6 +3271,7 @@ function compositeScene(){
   }
   ctx.globalCompositeOperation='source-over';
   ctx.globalAlpha=1;
+  ctx.shadowBlur=0;
 
   /* consistent-per-frame grain seed so dragging doesn't flicker */
   setSeed((ui.seed.value||'riso')+'-grainfixed');
@@ -3333,7 +3469,13 @@ function pushHistory(){
     cx:L.cx,cy:L.cy,w:L.w,h:L.h,rotation:L.rotation,
     blendMode:L.blendMode,opacity:L.opacity,
     visible:L.visible,locked:L.locked,
-    cache:L.cache, nativeW:L.nativeW, nativeH:L.nativeH
+    cache:L.cache, nativeW:L.nativeW, nativeH:L.nativeH,
+    inkA:L.inkA, inkB:L.inkB, seedState:L.seedState,
+    /* text layer fields (preserved through undo) */
+    text:L.text, fontFamily:L.fontFamily, fontSize:L.fontSize,
+    fontWeight:L.fontWeight, fontStyle:L.fontStyle, align:L.align,
+    color:L.color, lineHeight:L.lineHeight, letterSpacing:L.letterSpacing,
+    transform:L.transform
   }));
   scene.history.push({layers:snap,selectedId:scene.selectedId});
   if(scene.history.length>60)scene.history.shift();
@@ -3401,6 +3543,15 @@ function updateDetail(){
   $('lR').value=Math.round(L.rotation*180/Math.PI);
   $('lO').value=Math.round(L.opacity*100);
   $('lB').value=L.blendMode;
+  /* module controls (Ink A/B + re-roll) — only meaningful for procedural modules */
+  const modEl=$('modControls');
+  if(L&&L.kind!=='text'&&L.kind!=='image'){
+    modEl.style.display='block';
+    $('lInkA').value=L.inkA||ui.cA.value;
+    $('lInkB').value=L.inkB||ui.cB.value;
+  }else{
+    modEl.style.display='none';
+  }
   updateTextControls();
 }
 
@@ -3557,6 +3708,35 @@ function createTextLayer(initText){
   draw();refreshLayerPanel();updateDetail();
 }
 
+function bindModuleControls(){
+  const guard=()=>{
+    const L=getLayer(scene.selectedId);
+    if(!L||L.kind==='text'||L.kind==='image')return null;
+    return L;
+  };
+  $('lInkA').addEventListener('input',e=>{
+    const L=guard();if(!L)return;
+    L.inkA=e.target.value;recolorLayer(L);draw();refreshLayerPanel();
+  });
+  $('lInkA').addEventListener('change',()=>pushHistory());
+  $('lInkB').addEventListener('input',e=>{
+    const L=guard();if(!L)return;
+    L.inkB=e.target.value;recolorLayer(L);draw();refreshLayerPanel();
+  });
+  $('lInkB').addEventListener('change',()=>pushHistory());
+  $('lRegen').onclick=()=>{
+    const L=guard();if(!L)return;
+    regenerateLayer(L);
+    pushHistory();draw();refreshLayerPanel();
+  };
+  $('lInkReset').onclick=()=>{
+    const L=guard();if(!L)return;
+    L.inkA=null;L.inkB=null;
+    recolorLayer(L);
+    pushHistory();draw();refreshLayerPanel();updateDetail();
+  };
+}
+
 function bindTextControls(){
   const reRender=(commit)=>{
     const L=getLayer(scene.selectedId);
@@ -3711,6 +3891,7 @@ $('fileIn').addEventListener('change',e=>{
 $('layerText').onclick=()=>createTextLayer();
 bindDetailInputs();
 bindTextControls();
+bindModuleControls();
 
 /* editor keyboard shortcuts (run only in edit mode) */
 window.addEventListener('keydown',e=>{
