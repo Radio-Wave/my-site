@@ -111,7 +111,7 @@
   .lp-imports{border-bottom:1px solid #000;padding-bottom:12px;margin-bottom:12px}
   .lp-imports .ttl{font-size:10px;letter-spacing:.18em;text-transform:uppercase;
     color:var(--muted);margin-bottom:8px}
-  .lp-imports .brand-row{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px}
+  .lp-imports .brand-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:8px}
   .lp-imports .brand-btn{display:flex;flex-direction:column;align-items:center;
     justify-content:center;gap:6px;padding:10px 6px;background:#0e0e0e;
     border:1px solid #2a2a2a;color:var(--ink);cursor:pointer;
@@ -160,6 +160,10 @@
   .mod-ctrl .btn-row{margin-top:8px;gap:4px;display:flex}
   .mod-ctrl .btn-row button{flex:1;padding:6px 6px;font-size:10px}
   .mod-ctrl .mc-note{color:var(--muted);font-size:9.5px;margin-top:6px;line-height:1.4}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(10px);
+    background:#2a2a2a;color:var(--ink);font-family:inherit;font-size:11px;
+    padding:8px 14px;pointer-events:none;opacity:0;transition:opacity .15s,transform .15s;z-index:999}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
@@ -398,6 +402,7 @@
       </div>
       <div class="btn-row">
         <button id="exportPSD">Export PSD (layered)</button>
+        <button id="copyLink" class="alt">Copy link</button>
       </div>
       <div class="foot">
         <kbd>Space</kbd> regen · <kbd>S</kbd> seed · <kbd>E</kbd> export · <kbd>1-9</kbd> presets
@@ -417,14 +422,30 @@
 
     <div class="lp-imports">
       <div class="ttl">Import</div>
-      <div class="brand-row">
+      <div class="brand-grid">
+        <button class="brand-btn light" id="addPhreakingBlack" title="Insert the black Phreaking logo as a layer">
+          <span class="swatch"><img src="https://phreaking.co.uk/assets/PhreakingLogoBlack.png" alt="" onerror="this.style.display='none'"></span>
+          <span>Phreaking · black</span>
+        </button>
+        <button class="brand-btn light" id="addPhreakingSquareBlack" title="Insert the black Phreaking square logo as a layer">
+          <span class="swatch"><img src="https://phreaking.co.uk/assets/PhreakingLogoSquare_BLACK.png" alt="" onerror="this.style.display='none'"></span>
+          <span>Phreaking sq · black</span>
+        </button>
+        <button class="brand-btn light" id="addCWSABlack" title="Insert the black Can We Start Again logo as a layer">
+          <span class="swatch"><img src="https://phreaking.co.uk/assets/CanWeStartAgain/CWSTA-Logo-Clean-Black.png" alt="" onerror="this.style.display='none'"></span>
+          <span>CWSA · black</span>
+        </button>
         <button class="brand-btn dark" id="addPhreakingWhite" title="Insert the white Phreaking logo as a layer">
           <span class="swatch"><img src="https://phreaking.co.uk/assets/PhreakingLogoWhite.png" alt="" onerror="this.style.display='none'"></span>
           <span>Phreaking · white</span>
         </button>
-        <button class="brand-btn light" id="addPhreakingBlack" title="Insert the black Phreaking logo as a layer">
-          <span class="swatch"><img src="https://phreaking.co.uk/assets/PhreakingLogoBlack.png" alt="" onerror="this.style.display='none'"></span>
-          <span>Phreaking · black</span>
+        <button class="brand-btn dark" id="addPhreakingSquareWhite" title="Insert the white Phreaking square logo as a layer">
+          <span class="swatch"><img src="https://phreaking.co.uk/assets/PhreakingLogoSquare_WHITE.png" alt="" onerror="this.style.display='none'"></span>
+          <span>Phreaking sq · white</span>
+        </button>
+        <button class="brand-btn dark" id="addCWSAWhite" title="Insert the white Can We Start Again logo as a layer">
+          <span class="swatch"><img src="https://phreaking.co.uk/assets/CanWeStartAgain/CWSTA-Logo-Clean-White.png" alt="" onerror="this.style.display='none'"></span>
+          <span>CWSA · white</span>
         </button>
       </div>
       <label>From URL</label>
@@ -641,7 +662,8 @@ document.querySelectorAll('.size-presets button').forEach(b=>{
     draw();
   });
 });
-[ui.cA,ui.cB,ui.cP,ui.blend,ui.layout,ui.corpus,ui.crop].forEach(el=>el.addEventListener('input',draw));
+[ui.cA,ui.cB,ui.cP].forEach(el=>el.addEventListener('input',()=>{el.parentElement.style.background=el.value;draw()}));
+[ui.blend,ui.layout,ui.corpus,ui.crop].forEach(el=>el.addEventListener('input',draw));
 ui.customText.addEventListener('input',draw);
 Object.values(ui.modules).forEach(el=>el.addEventListener('change',draw));
 ui.seed.addEventListener('change',draw);
@@ -2655,6 +2677,7 @@ function draw(){
 
   applyGrain(W,H,+ui.g.value);
   if(ui.crop.checked)drawCropMarks(W,H);
+  syncURL();
 }
 
 /* ---------- solo draw + export ---------- */
@@ -3794,6 +3817,10 @@ function updateTextControls(){
 /* ---- image import (Phreaking logo, URL, file) ---- */
 const PHREAKING_LOGO_WHITE='https://phreaking.co.uk/assets/PhreakingLogoWhite.png';
 const PHREAKING_LOGO_BLACK='https://phreaking.co.uk/assets/PhreakingLogoBlack.png';
+const PHREAKING_LOGO_SQ_WHITE='https://phreaking.co.uk/assets/PhreakingLogoSquare_WHITE.png';
+const PHREAKING_LOGO_SQ_BLACK='https://phreaking.co.uk/assets/PhreakingLogoSquare_BLACK.png';
+const CWSA_LOGO_WHITE='https://phreaking.co.uk/assets/CanWeStartAgain/CWSTA-Logo-Clean-White.png';
+const CWSA_LOGO_BLACK='https://phreaking.co.uk/assets/CanWeStartAgain/CWSTA-Logo-Clean-Black.png';
 
 function setImportStatus(msg,err){
   const el=$('importStatus');if(!el)return;
@@ -3864,6 +3891,16 @@ function addPhreakingLogo(variant){
   else loadImageFromURL(PHREAKING_LOGO_WHITE,'Phreaking logo · white');
 }
 
+function addPhreakingSquareLogo(variant){
+  if(variant==='black')loadImageFromURL(PHREAKING_LOGO_SQ_BLACK,'Phreaking sq logo · black');
+  else loadImageFromURL(PHREAKING_LOGO_SQ_WHITE,'Phreaking sq logo · white');
+}
+
+function addCWSALogo(variant){
+  if(variant==='black')loadImageFromURL(CWSA_LOGO_BLACK,'CWSA logo · black');
+  else loadImageFromURL(CWSA_LOGO_WHITE,'CWSA logo · white');
+}
+
 /* ---- wire UI ---- */
 $('edit').onclick=()=>{scene.editMode?exitEditMode():enterEditMode()};
 $('reset').onclick=resetEditor;
@@ -3876,6 +3913,10 @@ $('layerUndo').onclick=undo;
 $('layerRedo').onclick=redo;
 $('addPhreakingWhite').onclick=()=>addPhreakingLogo('white');
 $('addPhreakingBlack').onclick=()=>addPhreakingLogo('black');
+$('addPhreakingSquareWhite').onclick=()=>addPhreakingSquareLogo('white');
+$('addPhreakingSquareBlack').onclick=()=>addPhreakingSquareLogo('black');
+$('addCWSAWhite').onclick=()=>addCWSALogo('white');
+$('addCWSABlack').onclick=()=>addCWSALogo('black');
 $('addURL').onclick=()=>{
   const u=$('urlIn').value.trim();
   if(!u){setImportStatus('Paste an image URL first.',true);return}
@@ -3914,6 +3955,83 @@ window.addEventListener('keydown',e=>{
     if(moved){e.preventDefault();draw();updateDetail()}
   }
 });
+
+/* ---------- URL state (shareable slug) ---------- */
+function getUIState(){
+  return {
+    s:ui.seed.value,
+    w:ui.w.value, h:ui.h.value,
+    n:ui.n.value, g:ui.g.value, m:ui.m.value, gl:ui.gl.value,
+    gr:ui.gr.value, gc:ui.gc.value,
+    cr:ui.crop.checked?'1':'0',
+    bl:ui.blend.value, ly:ui.layout.value,
+    cA:ui.cA.value, cB:ui.cB.value, cP:ui.cP.value,
+    pl:ui.palLib.value, co:ui.corpus.value,
+    ct:ui.customText.value,
+    mo:Object.entries(ui.modules).filter(([,el])=>el.checked).map(([k])=>k).join(',')
+  };
+}
+
+function applyUIState(params){
+  if(params.has('s'))ui.seed.value=params.get('s');
+  if(params.has('w')){ui.w.value=params.get('w');$('wv').textContent=params.get('w')}
+  if(params.has('h')){ui.h.value=params.get('h');$('hv').textContent=params.get('h')}
+  if(params.has('n')){ui.n.value=params.get('n');$('nv').textContent=params.get('n')}
+  if(params.has('g')){ui.g.value=params.get('g');$('gv').textContent=params.get('g')}
+  if(params.has('m')){ui.m.value=params.get('m');$('mv').textContent=params.get('m')}
+  if(params.has('gl')){ui.gl.value=params.get('gl');$('glv').textContent=params.get('gl')}
+  if(params.has('gr')){ui.gr.value=params.get('gr');$('grv').textContent=params.get('gr')}
+  if(params.has('gc')){ui.gc.value=params.get('gc');$('gcv').textContent=params.get('gc')}
+  if(params.has('cr'))ui.crop.checked=params.get('cr')==='1';
+  if(params.has('bl'))ui.blend.value=params.get('bl');
+  if(params.has('ly'))ui.layout.value=params.get('ly');
+  if(params.has('cA')){ui.cA.value=params.get('cA');ui.cA.parentElement.style.background=params.get('cA')}
+  if(params.has('cB')){ui.cB.value=params.get('cB');ui.cB.parentElement.style.background=params.get('cB')}
+  if(params.has('cP')){ui.cP.value=params.get('cP');ui.cP.parentElement.style.background=params.get('cP')}
+  if(params.has('pl'))ui.palLib.value=params.get('pl');
+  if(params.has('co'))ui.corpus.value=params.get('co');
+  if(params.has('ct'))ui.customText.value=params.get('ct');
+  if(params.has('mo')){
+    const on=new Set(params.get('mo').split(',').filter(Boolean));
+    Object.entries(ui.modules).forEach(([k,el])=>el.checked=on.has(k));
+  }
+  syncSizePresets();
+}
+
+let _urlTimer=null;
+function syncURL(){
+  if(typeof scene!=='undefined'&&scene&&scene.editMode)return;
+  clearTimeout(_urlTimer);
+  _urlTimer=setTimeout(()=>{
+    const p=new URLSearchParams(getUIState());
+    history.replaceState(null,'',location.pathname+'?'+p.toString());
+  },300);
+}
+
+/* toast helper */
+let _toastTimer=null;
+function showToast(msg){
+  let el=document.querySelector('.toast');
+  if(!el){el=document.createElement('div');el.className='toast';document.body.appendChild(el)}
+  el.textContent=msg;
+  clearTimeout(_toastTimer);
+  el.classList.add('show');
+  _toastTimer=setTimeout(()=>el.classList.remove('show'),1800);
+}
+
+/* copy-link button */
+$('copyLink').onclick=()=>{
+  const p=new URLSearchParams(getUIState());
+  const url=location.origin+location.pathname+'?'+p.toString();
+  navigator.clipboard.writeText(url).then(()=>showToast('Link copied to clipboard'))
+    .catch(()=>{prompt('Copy this link:',url)});
+};
+
+/* load state from URL on init */
+(function(){
+  const p=new URLSearchParams(location.search);
+  if(p.has('s')||p.has('mo')||p.has('cA'))applyUIState(p);
+})();
 
 window.addEventListener('resize',draw);
 draw();
