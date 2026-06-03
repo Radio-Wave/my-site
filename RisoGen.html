@@ -59,7 +59,7 @@
   .stage{display:flex;align-items:center;justify-content:center;
     padding:24px;overflow:auto;background:
       repeating-linear-gradient(45deg,#141414 0 2px,#0e0e0e 2px 6px)}
-  .frame{box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px #000}
+  .frame{box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px #000;position:relative}
   canvas{display:block}
   .foot{color:var(--muted);font-size:10px;margin-top:14px;line-height:1.5}
   kbd{background:#000;color:var(--ink);padding:1px 5px;border-radius:2px;
@@ -164,6 +164,23 @@
     background:#2a2a2a;color:var(--ink);font-family:inherit;font-size:11px;
     padding:8px 14px;pointer-events:none;opacity:0;transition:opacity .15s,transform .15s;z-index:999}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  /* ---- generation section ---- */
+  #genHUD{position:absolute;top:0;left:0;pointer-events:none;display:none;cursor:crosshair}
+  .gen-sub{border-top:1px solid #1a1a1a;padding-top:8px;margin-top:8px}
+  .gen-sub .cat-ttl{margin-top:0;margin-bottom:6px}
+  .gen-pt-bar{display:flex;justify-content:space-between;align-items:center;
+    margin:8px 0;padding:5px 7px;background:#0e0e0e;border:1px solid #2a2a2a;gap:4px}
+  .gen-pt-bar .ct{color:var(--muted);font-size:10px;flex:1}
+  .gen-pt-bar button{padding:2px 7px;font-size:9px;flex:none}
+  .gen-hint{color:var(--muted);font-size:9.5px;line-height:1.45;margin-top:5px}
+  .gen-hint.live{color:var(--accent);letter-spacing:.04em}
+  .gen-action-row{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+  /* collapsible groups */
+  .group>.ttl{cursor:pointer;user-select:none;position:relative;padding-right:16px}
+  .group>.ttl::after{content:'▾';position:absolute;right:0;top:50%;transform:translateY(-50%);
+    font-size:9px;color:var(--muted);line-height:1}
+  .group.collapsed>.ttl::after{content:'▸'}
+  .group.collapsed>*:not(.ttl){display:none!important}
 </style>
 </head>
 <body>
@@ -190,6 +207,7 @@
     </div>
 
     <div class="group">
+      <div class="ttl">Seed</div>
       <label>Seed <input id="seed" type="text" value="riso-001"></label>
       <div class="btn-row">
         <button id="regen">Regenerate</button>
@@ -367,6 +385,7 @@
         <div class="check"><input type="checkbox" id="mPhRt"> call route</div>
         <div class="check"><input type="checkbox" id="mPhBars"> test bars</div>
       </div>
+      <button id="modClearAll" class="alt" style="margin-top:8px;font-size:9px;padding:4px 8px">Clear all modules</button>
     </div>
 
     <div class="group">
@@ -386,6 +405,309 @@
       <div class="foot" style="margin-top:6px">Transparent export: no paper, no grain, auto-cropped to content + glow halo.</div>
     </div>
 
+    <!-- =============================== GENERATION =============================== -->
+    <div class="group" id="genGroup">
+      <div class="ttl">Generation</div>
+      <div class="sub" style="margin-bottom:10px">Click-to-place control points, then use guided tools to drive generation from those positions.</div>
+
+      <label>Mode
+        <select id="genMode">
+          <option value="state">State graph (nodes)</option>
+          <option value="polygon">Polygon fill</option>
+          <option value="attractor">Attractor field</option>
+          <option value="envelope">Envelope wave</option>
+          <option value="cluster">Cluster seeds</option>
+          <option value="path">Path scatter</option>
+          <option value="streams">Streams</option>
+          <option value="flowfield">Flow field</option>
+          <option value="stringart">String art</option>
+          <option value="dotorbit">Dot orbit</option>
+        </select>
+      </label>
+
+      <div class="gen-pt-bar">
+        <span class="ct" id="genCount">No points placed</span>
+        <button id="genUndoPt" class="alt">Undo</button>
+        <button id="genClear" class="alt">Clear</button>
+      </div>
+
+      <div class="btn-row">
+        <button id="genPlaceBtn">&#9678; Place points</button>
+      </div>
+      <div class="gen-hint" id="genPlaceHint">Enter placement mode, then click the canvas to add control points. Esc exits.</div>
+
+      <!-- STATE GRAPH OPTS -->
+      <div id="genStateOpts" class="gen-sub">
+        <div class="cat-ttl">State graph</div>
+        <label>Link mode
+          <select id="genLinkMode">
+            <option value="chain">Chain (sequential)</option>
+            <option value="nearest">Nearest neighbor</option>
+            <option value="random">Random edges</option>
+            <option value="full">Fully connected</option>
+            <option value="tree">Spanning tree</option>
+          </select>
+        </label>
+        <label>Arrows
+          <select id="genArrowMode">
+            <option value="forward">Forward only</option>
+            <option value="both">Bidirectional</option>
+            <option value="none">No arrows</option>
+          </select>
+        </label>
+        <label>Node radius <span class="v" id="genNodeSzV">28</span>
+          <input type="range" id="genNodeSz" min="8" max="60" value="28">
+        </label>
+        <div class="grid3" style="margin-top:4px">
+          <div class="check"><input type="checkbox" id="genNodeLabel" checked> labels</div>
+          <div class="check"><input type="checkbox" id="genNodeDash"> mixed dash</div>
+          <div class="check"><input type="checkbox" id="genNodeDouble"> double ring</div>
+        </div>
+      </div>
+
+      <!-- POLYGON FILL OPTS -->
+      <div id="genPolyOpts" class="gen-sub" style="display:none">
+        <div class="cat-ttl">Polygon fill</div>
+        <label>Fill with
+          <select id="genPolyFill">
+            <option value="hex">Hexagons</option>
+            <option value="tri">Triangles</option>
+            <option value="sq">Square grid</option>
+            <option value="mesh">Warped mesh</option>
+            <option value="parts">Particles</option>
+            <option value="flow">Flow field</option>
+            <option value="stars">Star field</option>
+            <option value="net">Network</option>
+          </select>
+        </label>
+        <label>Ink <select id="genPolyInk">
+          <option value="A">Ink A</option>
+          <option value="B">Ink B</option>
+        </select></label>
+        <div class="grid3" style="margin-top:4px">
+          <div class="check"><input type="checkbox" id="genPolyStroke" checked> outline</div>
+          <div class="check"><input type="checkbox" id="genPolyClose" checked> close</div>
+          <div class="check"><input type="checkbox" id="genPolyFillBg"> invert</div>
+        </div>
+      </div>
+
+      <!-- ATTRACTOR FIELD OPTS -->
+      <div id="genAttractOpts" class="gen-sub" style="display:none">
+        <div class="cat-ttl">Attractor field</div>
+        <label>Force type
+          <select id="genAttType">
+            <option value="attract">Attract (pull in)</option>
+            <option value="repel">Repel (push away)</option>
+            <option value="orbit">Vortex (orbit)</option>
+            <option value="tunnel">Tunnel (converge)</option>
+          </select>
+        </label>
+        <label>Base layer
+          <select id="genAttModule">
+            <option value="flow">Flow field</option>
+            <option value="parts">Particles</option>
+            <option value="stream">Curve streams</option>
+          </select>
+        </label>
+        <label>Strength <span class="v" id="genAttStrV">5</span>
+          <input type="range" id="genAttStr" min="1" max="20" value="5">
+        </label>
+        <label>Reach <span class="v" id="genAttReachV">200</span>
+          <input type="range" id="genAttReach" min="50" max="600" step="10" value="200">
+        </label>
+        <div class="check" style="margin-top:4px"><input type="checkbox" id="genAttMarker" checked> show attractor markers</div>
+      </div>
+
+      <!-- ENVELOPE WAVE OPTS -->
+      <div id="genEnvOpts" class="gen-sub" style="display:none">
+        <div class="cat-ttl">Envelope wave</div>
+        <label>Wave shape
+          <select id="genWaveType">
+            <option value="sine">Sine</option>
+            <option value="square">Square</option>
+            <option value="sawtooth">Sawtooth</option>
+            <option value="triangle">Triangle</option>
+            <option value="noise">Noise</option>
+          </select>
+        </label>
+        <label>Frequency <span class="v" id="genWaveFreqV">4</span>
+          <input type="range" id="genWaveFreq" min="1" max="16" value="4">
+        </label>
+        <label>Harmonics <span class="v" id="genWaveHarmV">1</span>
+          <input type="range" id="genWaveHarm" min="0" max="5" value="1">
+        </label>
+        <div class="grid3" style="margin-top:4px">
+          <div class="check"><input type="checkbox" id="genWaveAxis" checked> axis</div>
+          <div class="check"><input type="checkbox" id="genWavePhase"> phase copy</div>
+          <div class="check"><input type="checkbox" id="genWaveFill"> fill under</div>
+        </div>
+      </div>
+
+      <!-- CLUSTER OPTS -->
+      <div id="genClusterOpts" class="gen-sub" style="display:none">
+        <div class="cat-ttl">Cluster seeds</div>
+        <label>Particles/cluster <span class="v" id="genClustDensV">80</span>
+          <input type="range" id="genClustDens" min="10" max="400" value="80">
+        </label>
+        <label>Falloff radius % <span class="v" id="genClustRadV">15</span>
+          <input type="range" id="genClustRad" min="3" max="50" value="15">
+        </label>
+        <label>Element
+          <select id="genClustEl">
+            <option value="dot">Dots</option>
+            <option value="cross">Crosses</option>
+            <option value="ring">Mini rings</option>
+            <option value="sq">Squares</option>
+            <option value="hex">Hex marks</option>
+            <option value="mixed">Mixed</option>
+          </select>
+        </label>
+        <div class="grid3" style="margin-top:4px">
+          <div class="check"><input type="checkbox" id="genClustZone" checked> zone circles</div>
+          <div class="check"><input type="checkbox" id="genClustConnect"> connect</div>
+          <div class="check"><input type="checkbox" id="genClustGrad"> gradient</div>
+        </div>
+      </div>
+
+      <!-- PATH SCATTER OPTS -->
+      <div id="genPathOpts" class="gen-sub" style="display:none">
+        <div class="cat-ttl">Path scatter</div>
+        <label>Element
+          <select id="genPathEl">
+            <option value="circle">Circles</option>
+            <option value="square">Squares</option>
+            <option value="cross">Crosses</option>
+            <option value="diamond">Diamonds</option>
+            <option value="arrow">Arrows</option>
+            <option value="text">Text labels</option>
+          </select>
+        </label>
+        <label>Spacing <span class="v" id="genPathSpV">30</span>
+          <input type="range" id="genPathSp" min="5" max="120" value="30">
+        </label>
+        <label>Size <span class="v" id="genPathSzV">8</span>
+          <input type="range" id="genPathSz" min="2" max="40" value="8">
+        </label>
+        <div class="grid2" style="margin-top:4px">
+          <div class="check"><input type="checkbox" id="genPathRot" checked> rotate to path</div>
+          <div class="check"><input type="checkbox" id="genPathFade"> fade along</div>
+          <div class="check"><input type="checkbox" id="genPathDouble"> double trace</div>
+          <div class="check"><input type="checkbox" id="genPathScat"> scatter jitter</div>
+        </div>
+      </div>
+
+      <!-- STREAMS OPTS -->
+      <div id="genStreamsOpts" class="gen-sub" style="display:none">
+        <div class="cat-ttl">Streams</div>
+        <div class="gen-hint" style="margin-bottom:6px">Needs 2+ points — streams flow from first to last, swaying around the path.</div>
+        <label>Sway amount <span class="v" id="genStrmStrV">30</span>
+          <input type="range" id="genStrmStr" min="1" max="120" value="30">
+        </label>
+        <label>Sway freq <span class="v" id="genStrmReachV">3</span>
+          <input type="range" id="genStrmReach" min="1" max="12" value="3">
+        </label>
+        <label>Count <span class="v" id="genStrmCntV">250</span>
+          <input type="range" id="genStrmCnt" min="20" max="800" value="250">
+        </label>
+        <label>Steps <span class="v" id="genStrmStepV">180</span>
+          <input type="range" id="genStrmStep" min="40" max="500" value="180">
+        </label>
+        <label>Start spread <span class="v" id="genStrmSpeedV">8</span>
+          <input type="range" id="genStrmSpeed" min="0" max="60" value="8">
+        </label>
+        <div class="grid2" style="margin-top:4px">
+          <div class="check"><input type="checkbox" id="genStrmEdge" checked> show path</div>
+          <div class="check"><input type="checkbox" id="genStrmTaper" checked> taper width</div>
+          <div class="check"><input type="checkbox" id="genStrmFade" checked> fade out</div>
+          <div class="check"><input type="checkbox" id="genStrmTwoInk"> two inks</div>
+        </div>
+      </div>
+
+      <!-- FLOW FIELD OPTS -->
+      <div id="genFlowOpts" class="gen-sub" style="display:none">
+        <div class="cat-ttl">Flow field</div>
+        <label>Strength <span class="v" id="genFlowStrV">8</span>
+          <input type="range" id="genFlowStr" min="1" max="20" value="8">
+        </label>
+        <label>Reach <span class="v" id="genFlowReachV">220</span>
+          <input type="range" id="genFlowReach" min="50" max="600" step="10" value="220">
+        </label>
+        <label>Grid size <span class="v" id="genFlowGridV">35</span>
+          <input type="range" id="genFlowGrid" min="10" max="80" value="35">
+        </label>
+        <label>Arrow length <span class="v" id="genFlowLenV">20</span>
+          <input type="range" id="genFlowLen" min="8" max="50" value="20">
+        </label>
+        <label>Style
+          <select id="genFlowStyle">
+            <option value="arrow">Arrows</option>
+            <option value="line">Lines</option>
+            <option value="tick">Ticks</option>
+            <option value="dot">Dots</option>
+          </select>
+        </label>
+        <div class="grid2" style="margin-top:4px">
+          <div class="check"><input type="checkbox" id="genFlowStrSize" checked> scale by strength</div>
+          <div class="check"><input type="checkbox" id="genFlowStrAlpha"> alpha by strength</div>
+        </div>
+      </div>
+
+      <!-- STRING ART OPTS -->
+      <div id="genStringOpts" class="gen-sub" style="display:none">
+        <div class="cat-ttl">String art</div>
+        <label>Anchor count <span class="v" id="genStrNV">120</span>
+          <input type="range" id="genStrN" min="20" max="300" value="120">
+        </label>
+        <label>Connection offset <span class="v" id="genStrOffV">42</span>
+          <input type="range" id="genStrOff" min="2" max="150" value="42">
+        </label>
+        <label>Anchor shape
+          <select id="genStrShape">
+            <option value="circle">Circle</option>
+            <option value="rect">Rectangle</option>
+            <option value="pts">Placed points</option>
+          </select>
+        </label>
+        <div class="grid2" style="margin-top:4px">
+          <div class="check"><input type="checkbox" id="genStrMarkers"> show anchors</div>
+          <div class="check"><input type="checkbox" id="genStrDouble"> double layer</div>
+          <div class="check"><input type="checkbox" id="genStrTwoInk" checked> two inks</div>
+          <div class="check"><input type="checkbox" id="genStrCurve"> curved</div>
+        </div>
+      </div>
+
+      <!-- DOT ORBIT OPTS -->
+      <div id="genOrbitOpts" class="gen-sub" style="display:none">
+        <div class="cat-ttl">Dot orbit</div>
+        <label>Rings <span class="v" id="genOrbRingV">5</span>
+          <input type="range" id="genOrbRing" min="1" max="12" value="5">
+        </label>
+        <label>Dots / ring <span class="v" id="genOrbDotV">36</span>
+          <input type="range" id="genOrbDot" min="6" max="120" value="36">
+        </label>
+        <label>Orbit radius % <span class="v" id="genOrbRadV">40</span>
+          <input type="range" id="genOrbRad" min="5" max="80" value="40">
+        </label>
+        <div class="grid2" style="margin-top:4px">
+          <div class="check"><input type="checkbox" id="genOrbJitter" checked> jitter</div>
+          <div class="check"><input type="checkbox" id="genOrbTails" checked> comet tails</div>
+          <div class="check"><input type="checkbox" id="genOrbConnect"> connect ring</div>
+          <div class="check"><input type="checkbox" id="genOrbInner"> fill inner</div>
+        </div>
+      </div>
+
+      <!-- GENERATE ACTIONS -->
+      <div class="btn-row" style="margin-top:10px;border-top:1px solid #000;padding-top:10px">
+        <button id="genGenerate">Generate</button>
+        <button id="genAddLayer" class="alt">Add as layer</button>
+      </div>
+      <div class="btn-row">
+        <button id="genToSeed" class="alt">Points → seed</button>
+      </div>
+      <div class="gen-hint">Generate previews on canvas. Add as layer enters edit mode and pins the generation as a movable layer.</div>
+    </div>
+    <!-- =============================== /GENERATION ============================== -->
+
     <div class="group">
       <div class="ttl">Editor</div>
       <div class="btn-row">
@@ -396,6 +718,7 @@
     </div>
 
     <div class="group">
+      <div class="ttl">Export</div>
       <div class="btn-row">
         <button id="export">Export PNG</button>
         <button id="exportHi" class="alt">PNG @2x</button>
@@ -414,6 +737,7 @@
   <main class="stage">
     <div class="frame" id="frame">
       <canvas id="cv"></canvas>
+      <canvas id="genHUD"></canvas>
     </div>
   </main>
 
@@ -669,6 +993,7 @@ Object.values(ui.modules).forEach(el=>el.addEventListener('change',draw));
 ui.seed.addEventListener('change',draw);
 $('regen').onclick=draw;
 $('random').onclick=()=>{ui.seed.value='r-'+Math.random().toString(36).slice(2,8);draw()};
+$('modClearAll').onclick=()=>{Object.values(ui.modules).forEach(el=>{el.checked=false});draw()};
 $('export').onclick=()=>exportPNG(1);
 $('exportHi').onclick=()=>exportPNG(2);
 $('soloDraw').onclick=()=>drawSolo(false);
@@ -2628,6 +2953,10 @@ function draw(){
   const maxW=window.innerWidth-300-extraPanel-48;
   const scale=Math.min(maxW/W,maxH/H,1);
   cv.style.width=(W*scale)+'px';cv.style.height=(H*scale)+'px';
+  /* sync generation HUD */
+  {const hud=$('genHUD');if(hud){hud.width=W;hud.height=H;
+    hud.style.width=cv.style.width;hud.style.height=cv.style.height;
+    if(typeof genState!=='undefined'&&(genState.active||genState.points.length>0))drawGenHUD();}}
 
   ctx.fillStyle=ui.cP.value;ctx.fillRect(0,0,W,H);
 
@@ -4034,6 +4363,1027 @@ $('copyLink').onclick=()=>{
 })();
 
 window.addEventListener('resize',draw);
+
+/* ============================================================
+   GENERATION — click-to-place + guided generation tools
+============================================================ */
+
+const genState={
+  active:false,
+  points:[],
+  ghostPt:null
+};
+
+/* ---------- HUD overlay renderer ---------- */
+function drawGenHUD(){
+  const hud=$('genHUD');if(!hud)return;
+  const hctx=hud.getContext('2d');
+  const W=hud.width,H=hud.height;
+  hctx.clearRect(0,0,W,H);
+  const pts=genState.points;
+  if(pts.length===0&&!genState.ghostPt&&!genState.active)return;
+  const mode=$('genMode').value;
+  const inkA=hexToRgb(ui.cA.value);
+  const ac=(a)=>`rgba(${inkA[0]},${inkA[1]},${inkA[2]},${a})`;
+
+  /* connecting preview lines */
+  if(pts.length>=2){
+    hctx.setLineDash([5,5]);
+    hctx.strokeStyle=ac(.35);hctx.lineWidth=1;
+    hctx.beginPath();
+    if(mode==='polygon'||mode==='envelope'||mode==='path'){
+      pts.forEach((p,i)=>i===0?hctx.moveTo(p.x,p.y):hctx.lineTo(p.x,p.y));
+      if(mode==='polygon'&&pts.length>2)hctx.closePath();
+    }else{
+      for(let i=0;i<pts.length-1;i++){hctx.moveTo(pts[i].x,pts[i].y);hctx.lineTo(pts[i+1].x,pts[i+1].y)}
+    }
+    hctx.stroke();hctx.setLineDash([]);
+  }
+
+  /* attractor reach circles */
+  if(mode==='attractor'&&$('genAttReach')){
+    const reach=+$('genAttReach').value;
+    hctx.setLineDash([2,6]);hctx.strokeStyle=ac(.2);hctx.lineWidth=1;
+    for(const p of pts){hctx.beginPath();hctx.arc(p.x,p.y,reach,0,Math.PI*2);hctx.stroke()}
+    hctx.setLineDash([]);
+  }
+
+  /* ghost cursor */
+  if(genState.ghostPt&&genState.active){
+    hctx.fillStyle=ac(.25);
+    hctx.beginPath();hctx.arc(genState.ghostPt.x,genState.ghostPt.y,7,0,Math.PI*2);hctx.fill();
+    hctx.strokeStyle=ac(.55);hctx.lineWidth=1;hctx.stroke();
+  }
+
+  /* placed points */
+  pts.forEach((p,i)=>{
+    hctx.strokeStyle=ac(.9);hctx.lineWidth=1.5;
+    hctx.beginPath();hctx.arc(p.x,p.y,7,0,Math.PI*2);hctx.stroke();
+    hctx.fillStyle=ac(.8);
+    hctx.beginPath();hctx.arc(p.x,p.y,3,0,Math.PI*2);hctx.fill();
+    hctx.fillStyle=ac(.9);
+    hctx.font='600 9px "IBM Plex Mono",monospace';
+    hctx.fillText(i+1,p.x+10,p.y-5);
+  });
+}
+
+/* ---------- placement mode ---------- */
+function updateGenCount(){
+  const n=genState.points.length;
+  $('genCount').textContent=n===0?'No points placed':`${n} point${n!==1?'s':''} placed`;
+}
+
+function togglePlaceMode(){
+  genState.active=!genState.active;
+  const hud=$('genHUD');
+  const btn=$('genPlaceBtn');
+  const hint=$('genPlaceHint');
+  if(genState.active){
+    hud.style.display='block';hud.style.pointerEvents='all';
+    btn.textContent='◉ Stop placing';
+    hint.textContent='Click canvas to add points. Esc or Stop to exit.';
+    hint.className='gen-hint live';
+    syncGenHUDSize();
+  }else{
+    hud.style.pointerEvents='none';
+    btn.textContent='⊙ Place points';
+    hint.textContent='Enter placement mode, then click the canvas to add control points. Esc exits.';
+    hint.className='gen-hint';
+    genState.ghostPt=null;drawGenHUD();
+    if(genState.points.length===0)hud.style.display='none';
+  }
+}
+
+function syncGenHUDSize(){
+  const hud=$('genHUD');if(!hud)return;
+  const W=+ui.w.value,H=+ui.h.value;
+  hud.width=W;hud.height=H;
+  hud.style.width=cv.style.width;hud.style.height=cv.style.height;
+  drawGenHUD();
+}
+
+/* ---------- mode selector ---------- */
+const GEN_OPTS_IDS=['genStateOpts','genPolyOpts','genAttractOpts','genEnvOpts','genClusterOpts','genPathOpts','genStreamsOpts','genFlowOpts','genStringOpts','genOrbitOpts'];
+const GEN_MODE_MAP={state:'genStateOpts',polygon:'genPolyOpts',attractor:'genAttractOpts',
+  envelope:'genEnvOpts',cluster:'genClusterOpts',path:'genPathOpts',
+  streams:'genStreamsOpts',flowfield:'genFlowOpts',stringart:'genStringOpts',dotorbit:'genOrbitOpts'};
+function updateGenOpts(){
+  const mode=$('genMode').value;
+  GEN_OPTS_IDS.forEach(id=>{const el=$(id);if(el)el.style.display='none'});
+  const target=GEN_MODE_MAP[mode];
+  if(target&&$(target))$(target).style.display='block';
+}
+$('genMode').addEventListener('change',()=>{updateGenOpts();drawGenHUD()});
+updateGenOpts();
+
+/* ---------- slider display wires ---------- */
+[['genNodeSz','genNodeSzV'],['genAttStr','genAttStrV'],['genAttReach','genAttReachV'],
+ ['genWaveFreq','genWaveFreqV'],['genWaveHarm','genWaveHarmV'],
+ ['genClustDens','genClustDensV'],['genClustRad','genClustRadV'],
+ ['genPathSp','genPathSpV'],['genPathSz','genPathSzV'],
+ ['genStrmStr','genStrmStrV'],['genStrmReach','genStrmReachV'],['genStrmCnt','genStrmCntV'],
+ ['genStrmStep','genStrmStepV'],['genStrmSpeed','genStrmSpeedV'],
+ ['genFlowStr','genFlowStrV'],['genFlowReach','genFlowReachV'],
+ ['genFlowGrid','genFlowGridV'],['genFlowLen','genFlowLenV'],
+ ['genStrN','genStrNV'],['genStrOff','genStrOffV'],
+ ['genOrbRing','genOrbRingV'],['genOrbDot','genOrbDotV'],['genOrbRad','genOrbRadV']
+].forEach(([id,vid])=>{const el=$(id);if(!el)return;el.addEventListener('input',()=>{const v=$(vid);if(v)v.textContent=el.value})});
+
+/* ---------- placement event wiring ---------- */
+(function(){
+  const hud=$('genHUD');if(!hud)return;
+  hud.addEventListener('click',e=>{
+    if(!genState.active)return;
+    const pt=canvasPt(e);
+    genState.points.push(pt);
+    updateGenCount();drawGenHUD();
+  });
+  hud.addEventListener('mousemove',e=>{
+    if(!genState.active)return;
+    genState.ghostPt=canvasPt(e);drawGenHUD();
+  });
+  hud.addEventListener('mouseleave',()=>{
+    genState.ghostPt=null;if(genState.active)drawGenHUD();
+  });
+})();
+
+window.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&genState.active)togglePlaceMode();
+},{capture:false});
+
+$('genPlaceBtn').onclick=togglePlaceMode;
+$('genClear').onclick=()=>{
+  genState.points=[];updateGenCount();drawGenHUD();
+  if(!genState.active){const h=$('genHUD');if(h)h.style.display='none'}
+};
+$('genUndoPt').onclick=()=>{
+  if(genState.points.length>0)genState.points.pop();
+  updateGenCount();drawGenHUD();
+  if(!genState.active&&genState.points.length===0){const h=$('genHUD');if(h)h.style.display='none'}
+};
+
+/* ---------- helper: bounding box of point set ---------- */
+function ptsBBox(pts,pad){
+  if(!pts||pts.length===0)return null;
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for(const p of pts){if(p.x<minX)minX=p.x;if(p.y<minY)minY=p.y;if(p.x>maxX)maxX=p.x;if(p.y>maxY)maxY=p.y}
+  const p2=pad||0;
+  return{x:minX-p2,y:minY-p2,w:Math.max(1,maxX-minX+p2*2),h:Math.max(1,maxY-minY+p2*2)};
+}
+
+/* ============================================================
+   GENERATION MODULES
+============================================================ */
+
+/* ---- 1. Custom state graph from explicit node positions ---- */
+function modGenState(box,col,pts,opts){
+  const ink=hexToRgb(col);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  if(pts.length===0){ctx.restore();return}
+  const nodeR=opts.nodeRadius||28;
+  const linkMode=opts.linkMode||'chain';
+  const arrowMode=opts.arrowMode||'forward';
+
+  /* build edge list */
+  const edges=[];
+  if(linkMode==='chain'){
+    for(let i=0;i<pts.length-1;i++)edges.push([i,i+1]);
+  }else if(linkMode==='nearest'){
+    for(let i=0;i<pts.length;i++){
+      const near=[...pts.keys()].filter(j=>j!==i)
+        .sort((a,b)=>Math.hypot(pts[a].x-pts[i].x,pts[a].y-pts[i].y)-Math.hypot(pts[b].x-pts[i].x,pts[b].y-pts[i].y));
+      for(let k=0;k<Math.min(2,near.length);k++){
+        const j=near[k];
+        if(!edges.find(e=>(e[0]===i&&e[1]===j)||(e[0]===j&&e[1]===i)))edges.push([i,j]);
+      }
+    }
+  }else if(linkMode==='random'){
+    const n=pts.length,cnt=Math.max(n-1,rint(n,n*2));
+    for(let e=0;e<cnt;e++)edges.push([rint(0,n-1),rint(0,n-1)]);
+  }else if(linkMode==='full'){
+    for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++)edges.push([i,j]);
+  }else if(linkMode==='tree'){
+    for(let i=1;i<pts.length;i++){
+      let bestJ=0,bestD=Infinity;
+      for(let j=0;j<i;j++){const d=Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y);if(d<bestD){bestD=d;bestJ=j}}
+      edges.push([bestJ,i]);
+    }
+  }
+
+  /* draw edges */
+  strokeInk(ink,.85,1.3);fillInk(ink,1);
+  for(const [ai,bi] of edges){
+    const a=pts[ai],b=pts[bi];
+    if(!a||!b)continue;
+    const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d<1)continue;
+    const ux=dx/d,uy=dy/d;
+    const sx=a.x+ux*nodeR,sy=a.y+uy*nodeR;
+    const ex=b.x-ux*nodeR,ey=b.y-uy*nodeR;
+    const mx=(sx+ex)/2-uy*30,my=(sy+ey)/2+ux*30;
+    ctx.beginPath();ctx.moveTo(sx,sy);ctx.quadraticCurveTo(mx,my,ex,ey);ctx.stroke();
+    if(arrowMode==='forward'||arrowMode==='both'){
+      const aa=Math.atan2(ey-my,ex-mx);
+      ctx.beginPath();ctx.moveTo(ex,ey);
+      ctx.lineTo(ex-Math.cos(aa-.4)*7,ey-Math.sin(aa-.4)*7);
+      ctx.lineTo(ex-Math.cos(aa+.4)*7,ey-Math.sin(aa+.4)*7);
+      ctx.closePath();ctx.fill();
+    }
+    if(arrowMode==='both'){
+      const aa2=Math.atan2(sy-my,sx-mx);
+      ctx.beginPath();ctx.moveTo(sx,sy);
+      ctx.lineTo(sx-Math.cos(aa2-.4)*7,sy-Math.sin(aa2-.4)*7);
+      ctx.lineTo(sx-Math.cos(aa2+.4)*7,sy-Math.sin(aa2+.4)*7);
+      ctx.closePath();ctx.fill();
+    }
+  }
+
+  /* draw nodes */
+  strokeInk(ink,.95,1.3);
+  for(const pt of pts){
+    ctx.beginPath();ctx.arc(pt.x,pt.y,nodeR,0,Math.PI*2);
+    if(opts.dashed&&chance(.35))ctx.setLineDash([4,4]);else ctx.setLineDash([]);
+    ctx.stroke();ctx.setLineDash([]);
+    if(opts.double){strokeInk(ink,.45,1);ctx.beginPath();ctx.arc(pt.x,pt.y,nodeR+6,0,Math.PI*2);ctx.stroke();}
+  }
+  /* labels */
+  if(opts.labels){
+    ctx.fillStyle=rgba(ink,1);ctx.font='600 11px "IBM Plex Mono",monospace';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    for(const pt of pts)ctx.fillText(pickText(),pt.x,pt.y);
+    ctx.textAlign='start';ctx.textBaseline='alphabetic';
+  }
+  ctx.restore();
+}
+
+/* ---- 2. Polygon fill ---- */
+function modGenPoly(box,col,pts,opts){
+  if(pts.length<2)return;
+  const ink=hexToRgb(col);
+  ctx.save();
+  ctx.beginPath();
+  pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+  if(opts.close!==false)ctx.closePath();
+  ctx.clip();
+  const fillBox=ptsBBox(pts,40)||box;
+  drawModule(opts.fillModule||'hex',fillBox,opts.ink||'A');
+  ctx.restore();
+  if(opts.stroke){
+    ctx.save();
+    strokeInk(ink,.95,1.6);
+    ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+    if(opts.close!==false)ctx.closePath();ctx.stroke();
+    fillInk(ink,.9);
+    for(const p of pts){ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fill()}
+    ctx.restore();
+  }
+}
+
+/* ---- 3. Attractor field ---- */
+function modGenAttractor(box,colA,colB,attractors,opts){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  const type=opts.type||'attract';
+  const strength=(opts.strength||5)/5; // 1.0 at value=5; full vector blend at center
+  const reach=opts.reach||200;
+  const stepSize=3.5;
+  const field=(x,y)=>{
+    const bg=Math.sin(x*.007+2.1)*Math.cos(y*.009+1.7);
+    let vx=Math.cos(bg),vy=Math.sin(bg);
+    for(const att of attractors){
+      const dx=att.x-x,dy=att.y-y,dist=Math.hypot(dx,dy);
+      if(dist<2||dist>reach)continue;
+      const r=dist/reach;
+      const w=strength*(1-r)*(1-r); // quadratic falloff
+      const nd=dx/dist,ne=dy/dist;
+      let fx,fy;
+      if(type==='attract'){fx=nd;fy=ne}
+      else if(type==='repel'){fx=-nd;fy=-ne}
+      else if(type==='orbit'){fx=-ne;fy=nd}
+      else{const p=Math.min(1,r/.25);fx=nd*p;fy=ne*p} // tunnel: pull from distance
+      const bl=Math.min(w,1);
+      vx=vx*(1-bl)+fx*bl; vy=vy*(1-bl)+fy*bl;
+    }
+    return Math.atan2(vy,vx);
+  };
+  const base=opts.baseModule||'flow';
+  if(base==='flow'){
+    const lines=rint(350,550);
+    for(let k=0;k<lines;k++){
+      const ink=chance(.5)?inkA:inkB;
+      strokeInk(ink,rnd(.15,.65),rnd(.5,1.4));
+      let x,y;
+      if(k<lines*.35){
+        const edge=rint(0,3);
+        if(edge===0){x=box.x+rng()*box.w;y=box.y+rnd(-5,5)}
+        else if(edge===1){x=box.x+box.w+rnd(-5,5);y=box.y+rng()*box.h}
+        else if(edge===2){x=box.x+rng()*box.w;y=box.y+box.h+rnd(-5,5)}
+        else{x=box.x+rnd(-5,5);y=box.y+rng()*box.h}
+      }else{x=box.x+rng()*box.w;y=box.y+rng()*box.h}
+      ctx.beginPath();ctx.moveTo(x,y);
+      for(let s=0;s<200;s++){
+        const a=field(x,y);x+=Math.cos(a)*stepSize;y+=Math.sin(a)*stepSize;
+        if(x<box.x-10||x>box.x+box.w+10||y<box.y-10||y>box.y+box.h+10)break;
+        ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+    }
+  }else if(base==='parts'){
+    const cnt=Math.floor(box.w*box.h*.0018);
+    for(let i=0;i<cnt;i++){
+      let x=box.x+rng()*box.w,y=box.y+rng()*box.h;
+      for(let s=0;s<8;s++){const a=field(x,y);x+=Math.cos(a)*stepSize;y+=Math.sin(a)*stepSize}
+      if(x<box.x||x>box.x+box.w||y<box.y||y>box.y+box.h)continue;
+      const ink=chance(.5)?inkA:inkB;
+      fillInk(ink,rnd(.5,1));ctx.beginPath();ctx.arc(x,y,rnd(.8,2.5),0,Math.PI*2);ctx.fill();
+    }
+  }else{
+    const lines=rint(80,140);
+    for(let k=0;k<lines;k++){
+      const ink=chance(.5)?inkA:inkB;
+      strokeInk(ink,rnd(.3,.7),rnd(.6,1.2));
+      let x=box.x,y=box.y+((k+.5)/lines)*box.h;
+      ctx.beginPath();ctx.moveTo(x,y);
+      for(let s=0;s<280;s++){
+        const a=field(x,y);x+=Math.cos(a)*3.5;y+=Math.sin(a)*3.5;
+        if(x<box.x-10||x>box.x+box.w+10||y<box.y-10||y>box.y+box.h+10)break;
+        ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+    }
+  }
+  if(opts.showMarkers&&attractors.length>0){
+    for(const att of attractors){
+      fillInk(inkA,.9);ctx.beginPath();ctx.arc(att.x,att.y,4,0,Math.PI*2);ctx.fill();
+      strokeInk(inkA,.75,1.5);ctx.beginPath();ctx.arc(att.x,att.y,9,0,Math.PI*2);ctx.stroke();
+      strokeInk(inkA,.3,1);ctx.setLineDash([3,8]);
+      ctx.beginPath();ctx.arc(att.x,att.y,reach*.5,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.arc(att.x,att.y,reach,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+  ctx.restore();
+}
+
+/* ---- 3a. Streams ---- */
+function modGenStreams(box,colA,colB,pathPts,opts){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  if(pathPts.length<2){ctx.restore();return}
+  const count=opts.count||250;
+  const steps=opts.steps||180;
+  const swayAmt=opts.sway||30;       // perpendicular offset amplitude (canvas px)
+  const swayFreq=opts.swayFreq||3;   // oscillation cycles along path
+  const spread=opts.spread||8;       // perpendicular start/end scatter
+  const taper=opts.taper!==false;
+  const fade=opts.fade!==false;
+  const twoInk=opts.twoInk||false;
+  const showPath=opts.showPath!==false;
+
+  // Build catmull-rom spline
+  const sN=800;const spline=[];
+  for(let i=0;i<=sN;i++){
+    const t=i/sN*(pathPts.length-1);
+    const idx=Math.floor(t),f=t-idx;
+    const p0=pathPts[Math.max(0,idx-1)],p1=pathPts[idx];
+    const p2=pathPts[Math.min(pathPts.length-1,idx+1)],p3=pathPts[Math.min(pathPts.length-1,idx+2)];
+    const x=.5*(2*p1.x+(-p0.x+p2.x)*f+(2*p0.x-5*p1.x+4*p2.x-p3.x)*f*f+(-p0.x+3*p1.x-3*p2.x+p3.x)*f*f*f);
+    const y=.5*(2*p1.y+(-p0.y+p2.y)*f+(2*p0.y-5*p1.y+4*p2.y-p3.y)*f*f+(-p0.y+3*p1.y-3*p2.y+p3.y)*f*f*f);
+    spline.push({x,y});
+  }
+  // Arc-length table
+  const arc=[0];
+  for(let i=1;i<spline.length;i++)arc.push(arc[i-1]+Math.hypot(spline[i].x-spline[i-1].x,spline[i].y-spline[i-1].y));
+  const totalLen=arc[arc.length-1];
+  // Sample spline at arc-length fraction t ∈ [0,1] → {x,y, nx,ny (normal)}
+  const atT=(t)=>{
+    const target=Math.max(0,Math.min(totalLen,t*totalLen));
+    let lo=0,hi=spline.length-1;
+    while(lo<hi-1){const mid=(lo+hi)>>1;arc[mid]<=target?lo=mid:hi=mid}
+    const seg=arc[hi]-arc[lo];
+    const frac=seg>0?(target-arc[lo])/seg:0;
+    const sp=spline[lo],sq=spline[hi];
+    const x=sp.x+(sq.x-sp.x)*frac,y=sp.y+(sq.y-sp.y)*frac;
+    const tx=sq.x-sp.x,ty=sq.y-sp.y,tlen=Math.hypot(tx,ty)||1;
+    return{x,y,nx:-ty/tlen,ny:tx/tlen};
+  };
+
+  // Draw streams — each starts at pts[0], ends at pts[last], sways around the spine
+  for(let k=0;k<count;k++){
+    const ink=(twoInk&&chance(.5))?inkB:inkA;
+    const baseAlpha=rnd(.18,.65);
+    const phase=rng()*Math.PI*2;
+    const amp=rnd(.4,1.3)*swayAmt;
+    const freq=rnd(.7,1.4)*swayFreq;
+    const startOff=rnd(-spread,spread);
+    const endOff=rnd(-spread,spread);
+    const N2=Math.max(4,steps);
+    const sPts=[];
+    for(let s=0;s<=N2;s++){
+      const t=s/N2;
+      const{x,y,nx,ny}=atT(t);
+      // Sway fades to 0 at both ends so streams always converge at start/end points
+      const envelope=Math.sin(t*Math.PI);
+      const wave=Math.sin(t*Math.PI*2*freq+phase)*amp*envelope;
+      const offset=startOff*(1-t)+endOff*t+wave;
+      sPts.push({x:x+nx*offset,y:y+ny*offset});
+    }
+    for(let i=1;i<sPts.length;i++){
+      const{x:px,y:py}=sPts[i-1],{x:qx,y:qy}=sPts[i];
+      const u=i/sPts.length;
+      const al=fade?baseAlpha*(1-u*.35):baseAlpha;
+      const lw=taper?Math.max(.3,1.6-u*1.1):rnd(.6,1.2);
+      strokeInk(ink,al,lw);
+      ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(qx,qy);ctx.stroke();
+    }
+  }
+  // Guide path + markers
+  if(showPath){
+    strokeInk(inkA,.2,1);ctx.setLineDash([3,7]);
+    ctx.beginPath();spline.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  fillInk(inkA,.85);
+  ctx.beginPath();ctx.arc(pathPts[0].x,pathPts[0].y,5,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(pathPts[pathPts.length-1].x,pathPts[pathPts.length-1].y,5,0,Math.PI*2);ctx.fill();
+  for(let i=1;i<pathPts.length-1;i++){strokeInk(inkA,.5,1);ctx.beginPath();ctx.arc(pathPts[i].x,pathPts[i].y,3,0,Math.PI*2);ctx.stroke()}
+  ctx.restore();
+}
+
+/* ---- 3b. Flow field ---- */
+function modGenFlowField(box,col,attractors,opts){
+  const ink=hexToRgb(col);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  const strength=(opts.strength||8)/5;
+  const reach=opts.reach||220;
+  const gridSize=opts.gridSize||35;
+  const arrowLen=opts.arrowLen||20;
+  const style=opts.style||'arrow';
+  const sizeByStr=opts.sizeByStrength!==false;
+  const alphaByStr=opts.alphaByStrength||false;
+  const field=(x,y)=>{
+    const bg=Math.sin(x*.007+2.1)*Math.cos(y*.009+1.7);
+    let vx=Math.cos(bg),vy=Math.sin(bg),inf=0;
+    for(const att of attractors){
+      const dx=att.x-x,dy=att.y-y,dist=Math.hypot(dx,dy);
+      if(dist<2||dist>reach)continue;
+      const r=dist/reach;
+      const w=strength*(1-r)*(1-r);
+      const bl=Math.min(w,1);
+      vx=vx*(1-bl)+(dx/dist)*bl; vy=vy*(1-bl)+(dy/dist)*bl;
+      inf=Math.max(inf,1-r);
+    }
+    const len=Math.hypot(vx,vy)||1;
+    return{angle:Math.atan2(vy/len,vx/len),inf};
+  };
+  const cols=Math.ceil(box.w/gridSize)+1;
+  const rows=Math.ceil(box.h/gridSize)+1;
+  for(let r=0;r<=rows;r++){
+    for(let c=0;c<=cols;c++){
+      const gx=box.x+c*gridSize+rnd(-gridSize*.15,gridSize*.15);
+      const gy=box.y+r*gridSize+rnd(-gridSize*.15,gridSize*.15);
+      const{angle,inf}=field(gx,gy);
+      const sc=sizeByStr?Math.min(2,.5+inf*1.5):1;
+      const alpha=alphaByStr?Math.min(.9,.2+inf*.8):rnd(.4,.85);
+      const hlen=arrowLen*sc*.5;
+      const dx=Math.cos(angle)*hlen,dy=Math.sin(angle)*hlen;
+      ctx.save();ctx.translate(gx,gy);
+      strokeInk(ink,alpha,rnd(.5,1.1));
+      if(style==='arrow'){
+        ctx.beginPath();ctx.moveTo(-dx,-dy);ctx.lineTo(dx,dy);ctx.stroke();
+        const hw=Math.min(hlen*.5,5);
+        fillInk(ink,alpha);ctx.beginPath();
+        ctx.moveTo(dx,dy);
+        ctx.lineTo(dx-Math.cos(angle-.5)*hw,dy-Math.sin(angle-.5)*hw);
+        ctx.lineTo(dx-Math.cos(angle+.5)*hw,dy-Math.sin(angle+.5)*hw);
+        ctx.closePath();ctx.fill();
+      }else if(style==='line'){
+        ctx.beginPath();ctx.moveTo(-dx,-dy);ctx.lineTo(dx,dy);ctx.stroke();
+      }else if(style==='tick'){
+        ctx.rotate(angle);
+        ctx.beginPath();ctx.moveTo(0,-hlen);ctx.lineTo(0,hlen);ctx.stroke();
+      }else{
+        fillInk(ink,alpha);ctx.beginPath();ctx.arc(0,0,Math.max(1.5,3*sc),0,Math.PI*2);ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+}
+
+/* ---- 3c. String art ---- */
+function modGenStringArt(box,colA,colB,pts,opts){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  const N=opts.N||120;
+  const offset=opts.offset||42;
+  const shape=opts.shape||'circle';
+  const dbl=opts.double||false;
+  const twoInk=opts.twoInk!==false;
+  const curved=opts.curved||false;
+  const showMarkers=opts.showMarkers||false;
+  let anchors=[];
+
+  // Distribute n evenly-spaced anchors along a closed polygon's perimeter
+  const alongPoly=(polyPts,n)=>{
+    const segs=polyPts.map((p,i)=>{const q=polyPts[(i+1)%polyPts.length];return{p,q,len:Math.hypot(q.x-p.x,q.y-p.y)}});
+    const total=segs.reduce((s,g)=>s+g.len,0);
+    if(total<1)return polyPts;
+    const sp=total/n;const res=[];let si=0,sa=0;
+    for(let i=0;i<n;i++){
+      const tgt=i*sp;
+      while(si<segs.length-1&&sa+segs[si].len<tgt){sa+=segs[si].len;si++}
+      const seg=segs[si];
+      const t=seg.len>0?Math.min(1,(tgt-sa)/seg.len):0;
+      res.push({x:seg.p.x+(seg.q.x-seg.p.x)*t,y:seg.p.y+(seg.q.y-seg.p.y)*t});
+    }
+    return res;
+  };
+
+  if(pts.length>=2){
+    // Always use placed points as the polygon when they exist
+    anchors=alongPoly(pts,N);
+  }else if(shape==='rect'){
+    const mg=box.w*.07;
+    const x0=box.x+mg,y0=box.y+mg,x1=box.x+box.w-mg,y1=box.y+box.h-mg;
+    anchors=alongPoly([{x:x0,y:y0},{x:x1,y:y0},{x:x1,y:y1},{x:x0,y:y1}],N);
+  }else{
+    const cx=box.x+box.w*.5,cy=box.y+box.h*.5;
+    const r=Math.min(box.w,box.h)*.44;
+    for(let i=0;i<N;i++){const a=i/N*Math.PI*2-Math.PI*.5;anchors.push({x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r})}
+  }
+
+  const AN=anchors.length;if(AN<2){ctx.restore();return}
+  const clampOff=Math.min(offset,Math.floor(AN/2)-1);
+  // Compute a center for curved bezier control point
+  const cx2=anchors.reduce((s,a)=>s+a.x,0)/AN;
+  const cy2=anchors.reduce((s,a)=>s+a.y,0)/AN;
+  const drawConns=(off,alphaScale)=>{
+    for(let i=0;i<AN;i++){
+      const j=(i+off)%AN,a=anchors[i],b=anchors[j];
+      const ink=(twoInk&&chance(.5))?inkB:inkA;
+      strokeInk(ink,rnd(.18,.5)*alphaScale,rnd(.4,.9));
+      ctx.beginPath();
+      if(curved){
+        const mx=(a.x+b.x)*.5,my=(a.y+b.y)*.5;
+        ctx.moveTo(a.x,a.y);ctx.quadraticCurveTo(mx+(cx2-mx)*.3,my+(cy2-my)*.3,b.x,b.y);
+      }else{ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y)}
+      ctx.stroke();
+    }
+  };
+  drawConns(clampOff,1);
+  if(dbl)drawConns(Math.max(2,Math.floor(clampOff*.618)),.6);
+  if(showMarkers){
+    fillInk(inkA,.65);
+    for(const a of anchors){ctx.beginPath();ctx.arc(a.x,a.y,2,0,Math.PI*2);ctx.fill()}
+  }
+  // Show placed control points
+  if(pts.length>=2){
+    fillInk(inkA,.8);
+    for(const p of pts){ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fill()}
+  }
+  ctx.restore();
+}
+
+/* ---- 3d. Dot orbit ---- */
+function modGenDotOrbit(box,colA,colB,pathPts,opts){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  if(!pathPts.length){ctx.restore();return}
+  const rings=opts.rings||5;
+  const dotsPerRing=opts.dotsPerRing||36;
+  const maxR=Math.min(box.w,box.h)*(opts.maxRadPercent||40)/100;
+  const minR=maxR*.1;
+  const jitter=opts.jitter!==false;
+  const tails=opts.tails!==false;
+  const connect=opts.connect||false;
+  const fillIn=opts.fillInner||false;
+  const drawRings=(center,radMin,radMax)=>{
+    for(let ri=0;ri<rings;ri++){
+      const frac=(ri+1)/rings;
+      const radius=radMin+(radMax-radMin)*frac;
+      const ink=(ri%2===0)?inkA:inkB;
+      const alpha=rnd(.55,.9)*(1-frac*.25);
+      const ringPts=[];
+      for(let d=0;d<dotsPerRing;d++){
+        const a=d/dotsPerRing*Math.PI*2+ri*.7;
+        const jr=jitter?rnd(-radius*.08,radius*.08):0;
+        const ja=jitter?rnd(-.12,.12):0;
+        ringPts.push({x:center.x+Math.cos(a+ja)*(radius+jr),y:center.y+Math.sin(a+ja)*(radius+jr)});
+      }
+      for(const p of ringPts){
+        fillInk(ink,alpha*rnd(.7,1));
+        ctx.beginPath();ctx.arc(p.x,p.y,rnd(1.5,3),0,Math.PI*2);ctx.fill();
+        if(tails){
+          strokeInk(ink,alpha*.35,rnd(.5,.9));
+          const tl=radius*.22;
+          ctx.beginPath();ctx.moveTo(p.x,p.y);
+          ctx.lineTo(p.x+(center.x-p.x)/radius*tl,p.y+(center.y-p.y)/radius*tl);ctx.stroke();
+        }
+      }
+      if(connect){
+        strokeInk(ink,alpha*.25,rnd(.4,.7));ctx.setLineDash([2,5]);
+        ctx.beginPath();ringPts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+        ctx.closePath();ctx.stroke();ctx.setLineDash([]);
+      }
+    }
+    fillInk(inkA,.9);ctx.beginPath();ctx.arc(center.x,center.y,4,0,Math.PI*2);ctx.fill();
+    strokeInk(inkA,.5,1.5);ctx.beginPath();ctx.arc(center.x,center.y,9,0,Math.PI*2);ctx.stroke();
+    if(fillIn){fillInk(inkA,.07);ctx.beginPath();ctx.arc(center.x,center.y,radMin,0,Math.PI*2);ctx.fill()}
+  };
+  if(pathPts.length===1){
+    drawRings(pathPts[0],minR,maxR);
+  }else{
+    // orbit rings wrapping around the spline path
+    const sN=500;const spline=[];
+    for(let i=0;i<=sN;i++){
+      const t=i/sN*(pathPts.length-1);
+      const idx=Math.floor(t),f=t-idx;
+      const p0=pathPts[Math.max(0,idx-1)],p1=pathPts[idx];
+      const p2=pathPts[Math.min(pathPts.length-1,idx+1)],p3=pathPts[Math.min(pathPts.length-1,idx+2)];
+      const x=.5*(2*p1.x+(-p0.x+p2.x)*f+(2*p0.x-5*p1.x+4*p2.x-p3.x)*f*f+(-p0.x+3*p1.x-3*p2.x+p3.x)*f*f*f);
+      const y=.5*(2*p1.y+(-p0.y+p2.y)*f+(2*p0.y-5*p1.y+4*p2.y-p3.y)*f*f+(-p0.y+3*p1.y-3*p2.y+p3.y)*f*f*f);
+      spline.push({x,y});
+    }
+    let pathLen=0;
+    for(let i=1;i<spline.length;i++)pathLen+=Math.hypot(spline[i].x-spline[i-1].x,spline[i].y-spline[i-1].y);
+    for(let ri=0;ri<rings;ri++){
+      const frac=(ri+1)/rings;
+      const radius=minR+(maxR-minR)*frac;
+      const ink=(ri%2===0)?inkA:inkB;
+      const alpha=rnd(.55,.9)*(1-frac*.25);
+      const phase=ri*1.3;
+      const spacing=pathLen/dotsPerRing;
+      let acc=0;const ringPts=[];
+      for(let i=1;i<spline.length;i++){
+        const dx=spline[i].x-spline[i-1].x,dy=spline[i].y-spline[i-1].y;
+        const segLen=Math.hypot(dx,dy);if(!segLen)continue;
+        acc+=segLen;
+        if(acc>=spacing){
+          acc=0;
+          const{x:cx,y:cy}=spline[i];
+          const nx=-dy/segLen,ny=dx/segLen;
+          const angle=phase+ringPts.length/dotsPerRing*Math.PI*2;
+          const jr=jitter?rnd(-radius*.12,radius*.12):0;
+          const ox=nx*Math.cos(angle)*(radius+jr)+(-ny)*Math.sin(angle)*(radius+jr);
+          const oy=ny*Math.cos(angle)*(radius+jr)+(nx)*Math.sin(angle)*(radius+jr);
+          ringPts.push({x:cx+ox,y:cy+oy,cx,cy});
+        }
+      }
+      for(const p of ringPts){
+        fillInk(ink,alpha*rnd(.7,1));
+        ctx.beginPath();ctx.arc(p.x,p.y,rnd(1.5,2.8),0,Math.PI*2);ctx.fill();
+        if(tails){strokeInk(ink,alpha*.35,rnd(.5,.9));ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.cx,p.cy);ctx.stroke()}
+      }
+      if(connect&&ringPts.length>1){
+        strokeInk(ink,alpha*.25,rnd(.4,.7));ctx.setLineDash([2,5]);
+        ctx.beginPath();ringPts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+        ctx.stroke();ctx.setLineDash([]);
+      }
+    }
+    strokeInk(inkA,.18,1);ctx.setLineDash([3,6]);
+    ctx.beginPath();spline.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));ctx.stroke();
+    ctx.setLineDash([]);
+    for(const pt of pathPts){fillInk(inkA,.7);ctx.beginPath();ctx.arc(pt.x,pt.y,4,0,Math.PI*2);ctx.fill()}
+  }
+  ctx.restore();
+}
+
+/* ---- 4. Envelope wave ---- */
+function modGenEnvelope(box,col,ctrlPts,opts){
+  const ink=hexToRgb(col);
+  ctx.save();
+  const cy=box.y+box.h/2,amp=box.h*.38;
+  /* build smooth envelope from control points */
+  const sorted=[...ctrlPts].sort((a,b)=>a.x-b.x);
+  const getEnv=(x)=>{
+    if(sorted.length===0)return 1;
+    if(x<=sorted[0].x)return 1-(sorted[0].y-cy)/amp;
+    if(x>=sorted[sorted.length-1].x)return 1-(sorted[sorted.length-1].y-cy)/amp;
+    for(let i=0;i<sorted.length-1;i++){
+      if(sorted[i].x<=x&&sorted[i+1].x>=x){
+        const t=sorted[i].x===sorted[i+1].x?.5:(x-sorted[i].x)/(sorted[i+1].x-sorted[i].x);
+        const st=3*t*t-2*t*t*t;
+        const a=1-(sorted[i].y-cy)/amp,b2=1-(sorted[i+1].y-cy)/amp;
+        return a+(b2-a)*st;
+      }
+    }
+    return 1;
+  };
+  const waveType=opts.waveType||'sine';
+  const freq=opts.freq||4;
+  const harm=opts.harmonics||1;
+  const waveVal=(u)=>{
+    let v=0;
+    if(waveType==='sine'){v=Math.sin(u*Math.PI*2*freq);for(let h=2;h<=harm+1;h++)v+=Math.sin(u*Math.PI*2*freq*h)/h}
+    else if(waveType==='square'){v=Math.sign(Math.sin(u*Math.PI*2*freq));for(let h=3;h<=harm*2+1;h+=2)v+=Math.sign(Math.sin(u*Math.PI*2*freq*h))/h}
+    else if(waveType==='sawtooth'){v=(u*freq%1)*2-1;for(let h=2;h<=harm+1;h++)v+=((u*freq*h%1)*2-1)/h}
+    else if(waveType==='triangle'){v=Math.asin(Math.sin(u*Math.PI*2*freq))*2/Math.PI}
+    else{v=Math.sin(u*Math.PI*2*freq)*Math.cos(u*Math.PI*3.7*freq*.7)}
+    return Math.max(-1,Math.min(1,v));
+  };
+  if(opts.showAxis){strokeInk(ink,.25,1);ctx.beginPath();ctx.moveTo(box.x,cy);ctx.lineTo(box.x+box.w,cy);ctx.stroke()}
+  const N=300;
+  if(opts.fill){
+    fillInk(ink,.12);
+    ctx.beginPath();
+    for(let i=0;i<=N;i++){const u=i/N,x=box.x+u*box.w;const y=cy+waveVal(u)*amp*getEnv(x);i?ctx.lineTo(x,y):ctx.moveTo(x,y)}
+    ctx.lineTo(box.x+box.w,cy);ctx.lineTo(box.x,cy);ctx.closePath();ctx.fill();
+  }
+  strokeInk(ink,.95,1.7);
+  ctx.beginPath();
+  for(let i=0;i<=N;i++){const u=i/N,x=box.x+u*box.w;const y=cy+waveVal(u)*amp*getEnv(x);i?ctx.lineTo(x,y):ctx.moveTo(x,y)}
+  ctx.stroke();
+  if(opts.phaseCopy){
+    strokeInk(ink,.5,1.2);ctx.setLineDash([5,5]);
+    ctx.beginPath();
+    for(let i=0;i<=N;i++){const u=i/N,x=box.x+u*box.w;const y=cy+waveVal((u+.25)%1)*amp*getEnv(x)*.7;i?ctx.lineTo(x,y):ctx.moveTo(x,y)}
+    ctx.stroke();ctx.setLineDash([]);
+  }
+  /* control point markers */
+  for(const p of sorted){
+    strokeInk(ink,.25,1);ctx.setLineDash([2,5]);
+    ctx.beginPath();ctx.moveTo(p.x,box.y);ctx.lineTo(p.x,box.y+box.h);ctx.stroke();ctx.setLineDash([]);
+    fillInk(ink,.9);ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill();
+    strokeInk(ink,.8,1.4);ctx.beginPath();ctx.arc(p.x,p.y,10,0,Math.PI*2);ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* ---- 5. Cluster seeds ---- */
+function modGenClusters(box,col,seeds,opts){
+  const ink=hexToRgb(col);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  const cnt=opts.density||80;
+  const radius=Math.min(box.w,box.h)*(opts.radPercent||15)/100;
+  const elType=opts.element||'dot';
+  const drawEl=(x,y,r,a)=>{
+    strokeInk(ink,a,1);fillInk(ink,a);
+    if(elType==='dot'){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
+    else if(elType==='cross'){ctx.beginPath();ctx.moveTo(x-r*1.4,y);ctx.lineTo(x+r*1.4,y);ctx.moveTo(x,y-r*1.4);ctx.lineTo(x,y+r*1.4);ctx.stroke()}
+    else if(elType==='ring'){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke()}
+    else if(elType==='sq'){ctx.strokeRect(x-r,y-r,r*2,r*2)}
+    else if(elType==='hex'){hexPath(x,y,r);ctx.stroke()}
+    else{const t=rng();if(t<.34){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
+      else if(t<.67){ctx.beginPath();ctx.moveTo(x-r,y);ctx.lineTo(x+r,y);ctx.moveTo(x,y-r);ctx.lineTo(x,y+r);ctx.stroke()}
+      else ctx.strokeRect(x-r,y-r,r*2,r*2)}
+  };
+  for(const seed of seeds){
+    for(let i=0;i<cnt;i++){
+      const d=Math.pow(rng(),opts.gradient?1.6:1)*radius;
+      const a=rng()*Math.PI*2;
+      const x=seed.x+Math.cos(a)*d,y=seed.y+Math.sin(a)*d;
+      if(x<box.x||x>box.x+box.w||y<box.y||y>box.y+box.h)continue;
+      const alpha=opts.gradient?(1-d/radius)*.88+.08:rnd(.5,.95);
+      drawEl(x,y,rnd(.9,2.8),alpha);
+    }
+  }
+  if(opts.connect&&seeds.length>1){
+    strokeInk(ink,.35,1);
+    for(let i=0;i<seeds.length-1;i++){ctx.beginPath();ctx.moveTo(seeds[i].x,seeds[i].y);ctx.lineTo(seeds[i+1].x,seeds[i+1].y);ctx.stroke()}
+  }
+  if(opts.zones){
+    strokeInk(ink,.3,1);ctx.setLineDash([3,6]);
+    for(const s of seeds){ctx.beginPath();ctx.arc(s.x,s.y,radius,0,Math.PI*2);ctx.stroke()}
+    ctx.setLineDash([]);
+    fillInk(ink,1);
+    for(const s of seeds){ctx.beginPath();ctx.arc(s.x,s.y,4,0,Math.PI*2);ctx.fill();
+      strokeInk(ink,.8,1.5);ctx.beginPath();ctx.arc(s.x,s.y,9,0,Math.PI*2);ctx.stroke()}
+  }
+  ctx.restore();
+}
+
+/* ---- 6. Path scatter ---- */
+function modGenPath(box,col,pathPts,opts){
+  if(pathPts.length<2)return;
+  const ink=hexToRgb(col);
+  ctx.save();
+  const spacing=Math.max(2,opts.spacing||30);
+  const elType=opts.element||'circle';
+  const sz=opts.size||8;
+  const rotToPath=opts.rotateToPath!==false;
+  const jit=opts.scatter?8:0;
+  /* catmull-rom sample */
+  const sampleN=500;
+  const sampled=[];
+  for(let i=0;i<=sampleN;i++){
+    const t=i/sampleN*(pathPts.length-1);
+    const idx=Math.floor(t),f=t-idx;
+    const p0=pathPts[Math.max(0,idx-1)],p1=pathPts[idx];
+    const p2=pathPts[Math.min(pathPts.length-1,idx+1)],p3=pathPts[Math.min(pathPts.length-1,idx+2)];
+    const x=.5*(2*p1.x+(-p0.x+p2.x)*f+(2*p0.x-5*p1.x+4*p2.x-p3.x)*f*f+(-p0.x+3*p1.x-3*p2.x+p3.x)*f*f*f);
+    const y=.5*(2*p1.y+(-p0.y+p2.y)*f+(2*p0.y-5*p1.y+4*p2.y-p3.y)*f*f+(-p0.y+3*p1.y-3*p2.y+p3.y)*f*f*f);
+    sampled.push({x,y});
+  }
+  /* draw guide line */
+  strokeInk(ink,.28,1);
+  ctx.beginPath();sampled.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));ctx.stroke();
+  /* place elements along path */
+  let acc=0;
+  for(let i=1;i<sampled.length;i++){
+    const dx=sampled[i].x-sampled[i-1].x,dy=sampled[i].y-sampled[i-1].y;
+    acc+=Math.hypot(dx,dy);
+    if(acc<spacing)continue;
+    acc=0;
+    const x=sampled[i].x+rnd(-jit,jit),y=sampled[i].y+rnd(-jit,jit);
+    const angle=rotToPath?Math.atan2(dy,dx):0;
+    const u=i/sampled.length;
+    const alpha=opts.fade?(1-u*.7):rnd(.6,.95);
+    ctx.save();ctx.translate(x,y);ctx.rotate(angle);
+    strokeInk(ink,alpha,1.3);fillInk(ink,alpha);
+    const h=sz/2;
+    if(elType==='circle'){ctx.beginPath();ctx.arc(0,0,h,0,Math.PI*2);ctx.stroke()}
+    else if(elType==='square'){ctx.strokeRect(-h,-h,sz,sz)}
+    else if(elType==='cross'){ctx.beginPath();ctx.moveTo(-h,0);ctx.lineTo(h,0);ctx.moveTo(0,-h);ctx.lineTo(0,h);ctx.stroke()}
+    else if(elType==='diamond'){ctx.beginPath();ctx.moveTo(0,-h);ctx.lineTo(h,0);ctx.lineTo(0,h);ctx.lineTo(-h,0);ctx.closePath();ctx.stroke()}
+    else if(elType==='arrow'){ctx.beginPath();ctx.moveTo(-h,0);ctx.lineTo(h,0);ctx.stroke();ctx.beginPath();ctx.moveTo(h,0);ctx.lineTo(h-4,-3);ctx.lineTo(h-4,3);ctx.closePath();ctx.fill()}
+    else{ctx.font=`600 ${sz}px "IBM Plex Mono",monospace`;ctx.fillStyle=rgba(hexToRgb(col),alpha);ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(pickText(),0,0);ctx.textAlign='start';ctx.textBaseline='alphabetic'}
+    if(opts.double){strokeInk(ink,alpha*.4,1);ctx.beginPath();ctx.arc(0,0,h+4,0,Math.PI*2);ctx.stroke()}
+    ctx.restore();
+  }
+  /* control point dots */
+  fillInk(ink,.6);
+  for(const p of pathPts){ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill()}
+  ctx.restore();
+}
+
+/* ---- main generation dispatch ---- */
+function runGeneration(renderCtx){
+  const pts=genState.points;
+  const mode=$('genMode').value;
+  const W=+ui.w.value,H=+ui.h.value;
+  const box={x:0,y:0,w:W,h:H};
+  const oldCtx=ctx;
+  if(renderCtx)ctx=renderCtx;
+  setSeed(ui.seed.value||'riso');
+  switch(mode){
+    case 'state':
+      modGenState(box,ui.cA.value,pts,{
+        linkMode:$('genLinkMode').value,
+        arrowMode:$('genArrowMode').value,
+        nodeRadius:+$('genNodeSz').value,
+        labels:$('genNodeLabel').checked,
+        dashed:$('genNodeDash').checked,
+        double:$('genNodeDouble').checked
+      });break;
+    case 'polygon':
+      modGenPoly(box,ui.cA.value,pts,{
+        fillModule:$('genPolyFill').value,
+        ink:$('genPolyInk').value==='B'?'B':'A',
+        stroke:$('genPolyStroke').checked,
+        close:$('genPolyClose').checked
+      });break;
+    case 'attractor':
+      modGenAttractor(box,ui.cA.value,ui.cB.value,pts,{
+        type:$('genAttType').value,
+        baseModule:$('genAttModule').value,
+        strength:+$('genAttStr').value,
+        reach:+$('genAttReach').value,
+        showMarkers:$('genAttMarker').checked
+      });break;
+    case 'envelope':
+      modGenEnvelope(box,ui.cA.value,pts,{
+        waveType:$('genWaveType').value,
+        freq:+$('genWaveFreq').value,
+        harmonics:+$('genWaveHarm').value,
+        phaseCopy:$('genWavePhase').checked,
+        showAxis:$('genWaveAxis').checked,
+        fill:$('genWaveFill').checked
+      });break;
+    case 'cluster':
+      modGenClusters(box,ui.cA.value,pts,{
+        density:+$('genClustDens').value,
+        radPercent:+$('genClustRad').value,
+        element:$('genClustEl').value,
+        zones:$('genClustZone').checked,
+        connect:$('genClustConnect').checked,
+        gradient:$('genClustGrad').checked
+      });break;
+    case 'path':
+      modGenPath(box,ui.cA.value,pts,{
+        spacing:+$('genPathSp').value,
+        element:$('genPathEl').value,
+        size:+$('genPathSz').value,
+        rotateToPath:$('genPathRot').checked,
+        fade:$('genPathFade').checked,
+        double:$('genPathDouble').checked,
+        scatter:$('genPathScat').checked
+      });break;
+    case 'streams':
+      modGenStreams(box,ui.cA.value,ui.cB.value,pts,{
+        sway:+$('genStrmStr').value,
+        swayFreq:+$('genStrmReach').value,
+        count:+$('genStrmCnt').value,
+        steps:+$('genStrmStep').value,
+        spread:+$('genStrmSpeed').value,
+        showPath:$('genStrmEdge').checked,
+        taper:$('genStrmTaper').checked,
+        fade:$('genStrmFade').checked,
+        twoInk:$('genStrmTwoInk').checked
+      });break;
+    case 'flowfield':
+      modGenFlowField(box,ui.cA.value,pts,{
+        strength:+$('genFlowStr').value,
+        reach:+$('genFlowReach').value,
+        gridSize:+$('genFlowGrid').value,
+        arrowLen:+$('genFlowLen').value,
+        style:$('genFlowStyle').value,
+        sizeByStrength:$('genFlowStrSize').checked,
+        alphaByStrength:$('genFlowStrAlpha').checked
+      });break;
+    case 'stringart':
+      modGenStringArt(box,ui.cA.value,ui.cB.value,pts,{
+        N:+$('genStrN').value,
+        offset:+$('genStrOff').value,
+        shape:$('genStrShape').value,
+        showMarkers:$('genStrMarkers').checked,
+        double:$('genStrDouble').checked,
+        twoInk:$('genStrTwoInk').checked,
+        curved:$('genStrCurve').checked
+      });break;
+    case 'dotorbit':
+      modGenDotOrbit(box,ui.cA.value,ui.cB.value,pts,{
+        rings:+$('genOrbRing').value,
+        dotsPerRing:+$('genOrbDot').value,
+        maxRadPercent:+$('genOrbRad').value,
+        jitter:$('genOrbJitter').checked,
+        tails:$('genOrbTails').checked,
+        connect:$('genOrbConnect').checked,
+        fillInner:$('genOrbInner').checked
+      });break;
+  }
+  if(renderCtx)ctx=oldCtx;
+}
+
+$('genGenerate').onclick=()=>{
+  const _gm=$('genMode').value;
+  const _nopts=_gm==='stringart'&&$('genStrShape')&&$('genStrShape').value!=='pts'
+              ||_gm==='flowfield';
+  if(!_nopts&&genState.points.length===0){showToast('Place at least 1 point first');return}
+  draw();
+  const glow=+ui.gl.value;
+  if(glow>0){ctx.shadowBlur=glow;ctx.shadowColor=rgba(hexToRgb(ui.cA.value),.9)}
+  ctx.globalCompositeOperation=ui.blend.value;
+  runGeneration(null);
+  ctx.globalCompositeOperation='source-over';ctx.shadowBlur=0;
+  applyGrain(+ui.w.value,+ui.h.value,+ui.g.value);
+  if(ui.crop.checked)drawCropMarks(+ui.w.value,+ui.h.value);
+  /* keep HUD visible */
+  syncGenHUDSize();
+  showToast('Generated');
+};
+
+$('genAddLayer').onclick=()=>{
+  const _gm2=$('genMode').value;
+  const _nopts2=_gm2==='stringart'&&$('genStrShape')&&$('genStrShape').value!=='pts'
+               ||_gm2==='flowfield';
+  if(!_nopts2&&genState.points.length===0){showToast('Place at least 1 point first');return}
+  if(!scene.editMode)enterEditMode();
+  const W=+ui.w.value,H=+ui.h.value;
+  const cnv=document.createElement('canvas');cnv.width=W;cnv.height=H;
+  runGeneration(cnv.getContext('2d'));
+  const L={
+    id:scene.nextId++,kind:'image',layerKey:'A',
+    cx:W/2,cy:H/2,w:W,h:H,rotation:0,
+    blendMode:ui.blend.value,opacity:1,visible:true,locked:false,
+    name:`gen:${$('genMode').value}`,
+    cache:cnv,nativeW:W,nativeH:H
+  };
+  scene.layers.push(L);scene.selectedId=L.id;
+  pushHistory();draw();refreshLayerPanel();updateDetail();
+  showToast('Added as layer');
+};
+
+$('genToSeed').onclick=()=>{
+  if(genState.points.length===0){showToast('No points placed');return}
+  const str=genState.points.map(p=>`${Math.round(p.x)}.${Math.round(p.y)}`).join(':');
+  const h=xmur3(str)();
+  ui.seed.value='gen-'+h.toString(16).slice(-6);
+  draw();showToast('Seed set from points');
+};
+
+/* symmetry tools */
+/* ---- collapsible panel groups ---- */
+(function(){
+  const KEY='risogen_collapsed';
+  const load=()=>{try{return new Set(JSON.parse(localStorage.getItem(KEY)||'[]'))}catch{return new Set()}};
+  const save=s=>localStorage.setItem(KEY,JSON.stringify([...s]));
+  const hasState=localStorage.getItem(KEY)!==null;
+  const state=load();
+  if(!hasState)state.add('Generation'); /* generation collapsed on first visit */
+  document.querySelectorAll('.panel .group').forEach(grp=>{
+    const ttl=grp.querySelector(':scope>.ttl');if(!ttl)return;
+    const key=ttl.textContent.trim();
+    if(state.has(key))grp.classList.add('collapsed');
+    ttl.addEventListener('click',()=>{
+      grp.classList.toggle('collapsed');
+      const s=load();
+      if(grp.classList.contains('collapsed'))s.add(key);else s.delete(key);
+      save(s);
+    });
+  });
+  if(!hasState)save(state);
+})();
+
 draw();
 </script>
 </body>
