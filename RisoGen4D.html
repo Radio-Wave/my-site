@@ -258,6 +258,7 @@
         <select id="motFormat">
           <option value="zip">PNG frames (.zip)</option>
           <option value="webm">WebM video</option>
+          <option value="mp4">MP4 video (H.264)</option>
         </select>
       </label>
       <div class="btn-row">
@@ -266,7 +267,7 @@
       <div id="motProg" style="display:none;height:7px;background:#0e0e0e;border:1px solid #2a2a2a;margin-top:8px">
         <div id="motProgBar" style="height:100%;width:0;background:var(--accent);transition:width .05s linear"></div>
       </div>
-      <div class="foot" id="motStatus" style="margin-top:6px">Frame-by-frame at 24fps (exact, no dropped frames). PNG ZIP is lossless &amp; universal → <code>ffmpeg -framerate 24 -i frame_%04d.png -pix_fmt yuv420p out.mp4</code>. WebM needs Chrome/Edge.</div>
+      <div class="foot" id="motStatus" style="margin-top:6px">Frame-by-frame at 24fps (exact, no dropped frames). MP4/WebM encode via WebCodecs (Chrome/Edge). PNG ZIP is lossless &amp; universal → <code>ffmpeg -framerate 24 -i frame_%04d.png -pix_fmt yuv420p out.mp4</code>.</div>
     </div>
 
     <div class="group">
@@ -1298,6 +1299,104 @@ async function encodeWebM(frames,fps,onFrame){
   return {blob:muxWebM(out,W,H,codecId),ext:'webm'};
 }
 
+/* ---------- minimal progressive MP4 (H.264) muxer ----------
+   Constrained-baseline H.264 only ⇒ no B-frames ⇒ decode order == presentation
+   order, so a uniform stts and no ctts are correct. Single chunk; moov before mdat. */
+function _mb(type,...parts){                          /* box */
+  const body=_concatU8(parts), hdr=new Uint8Array(8);
+  new DataView(hdr.buffer).setUint32(0,8+body.length);
+  for(let i=0;i<4;i++)hdr[4+i]=type.charCodeAt(i)&0xff;
+  return _concatU8([hdr,body]);
+}
+function _mfb(type,version,flags,...parts){           /* full box */
+  const vf=new Uint8Array(4);vf[0]=version&0xff;vf[1]=(flags>>16)&0xff;vf[2]=(flags>>8)&0xff;vf[3]=flags&0xff;
+  return _mb(type,vf,_concatU8(parts));
+}
+function _mu32(n){const a=new Uint8Array(4);new DataView(a.buffer).setUint32(0,n>>>0);return a;}
+function _mu16(n){const a=new Uint8Array(2);new DataView(a.buffer).setUint16(0,n&0xffff);return a;}
+function _ms(str){const a=new Uint8Array(str.length);for(let i=0;i<str.length;i++)a[i]=str.charCodeAt(i)&0xff;return a;}
+const _MMAT=_concatU8([_mu32(0x00010000),_mu32(0),_mu32(0),_mu32(0),_mu32(0x00010000),_mu32(0),_mu32(0),_mu32(0),_mu32(0x40000000)]);
+function buildMP4(samples,avcC,width,height,fps){
+  const N=samples.length, timescale=fps, duration=N;  /* 1 timescale unit per frame */
+  const sizes=samples.map(s=>s.u8.length);
+  const keyIdx=[];samples.forEach((s,i)=>{if(s.key)keyIdx.push(i+1)});
+  const mvhd=_mfb('mvhd',0,0,_mu32(0),_mu32(0),_mu32(timescale),_mu32(duration),
+    _mu32(0x00010000),_mu16(0x0100),_mu16(0),_mu32(0),_mu32(0),_MMAT,
+    _mu32(0),_mu32(0),_mu32(0),_mu32(0),_mu32(0),_mu32(0),_mu32(2));
+  const tkhd=_mfb('tkhd',0,0x7,_mu32(0),_mu32(0),_mu32(1),_mu32(0),_mu32(duration),
+    _mu32(0),_mu32(0),_mu16(0),_mu16(0),_mu16(0),_mu16(0),_MMAT,
+    _mu32(width<<16),_mu32(height<<16));
+  const mdhd=_mfb('mdhd',0,0,_mu32(0),_mu32(0),_mu32(timescale),_mu32(duration),_mu16(0x55C4),_mu16(0));
+  const hdlr=_mfb('hdlr',0,0,_mu32(0),_ms('vide'),_mu32(0),_mu32(0),_mu32(0),_ms('VideoHandler\0'));
+  const vmhd=_mfb('vmhd',0,1,_mu16(0),_mu16(0),_mu16(0),_mu16(0));
+  const dref=_mfb('dref',0,0,_mu32(1),_mfb('url ',0,1));
+  const dinf=_mb('dinf',dref);
+  const avc1=_mb('avc1',
+    new Uint8Array(6),_mu16(1),                       /* reserved + data_ref_index */
+    _mu16(0),_mu16(0),_mu32(0),_mu32(0),_mu32(0),     /* pre_defined / reserved */
+    _mu16(width),_mu16(height),
+    _mu32(0x00480000),_mu32(0x00480000),_mu32(0),
+    _mu16(1),new Uint8Array(32),_mu16(0x0018),_mu16(0xffff),
+    _mb('avcC',avcC));
+  const stsd=_mfb('stsd',0,0,_mu32(1),avc1);
+  const stts=_mfb('stts',0,0,_mu32(1),_mu32(N),_mu32(1));
+  const stss=(keyIdx.length&&keyIdx.length<N)?_mfb('stss',0,0,_mu32(keyIdx.length),_concatU8(keyIdx.map(_mu32))):null;
+  const stsc=_mfb('stsc',0,0,_mu32(1),_mu32(1),_mu32(N),_mu32(1));
+  const stsz=_mfb('stsz',0,0,_mu32(0),_mu32(N),_concatU8(sizes.map(_mu32)));
+  const stco=off=>_mfb('stco',0,0,_mu32(1),_mu32(off));
+  const moov=off=>{
+    const stblKids=[stsd,stts];if(stss)stblKids.push(stss);stblKids.push(stsc,stsz,stco(off));
+    const stbl=_mb('stbl',...stblKids);
+    const minf=_mb('minf',vmhd,dinf,stbl);
+    const mdia=_mb('mdia',mdhd,hdlr,minf);
+    const trak=_mb('trak',tkhd,mdia);
+    return _mb('moov',mvhd,trak);
+  };
+  const ftyp=_mb('ftyp',_ms('isom'),_mu32(0x200),_ms('isom'),_ms('iso2'),_ms('avc1'),_ms('mp41'));
+  const moovLen=moov(0).length;
+  const dataOffset=ftyp.length+moovLen+8;             /* mdat payload starts here */
+  const mdat=_mb('mdat',_concatU8(samples.map(s=>s.u8)));
+  return new Blob([ftyp,moov(dataOffset),mdat],{type:'video/mp4'});
+}
+async function encodeMP4(frames,fps,onFrame){
+  if(typeof VideoEncoder==='undefined'||typeof VideoFrame==='undefined')
+    throw new Error('WebCodecs unavailable — use PNG frames (.zip).');
+  const W=cv.width,H=cv.height;
+  /* constrained-baseline, lowest sufficient level first */
+  const levels=['avc1.42E01E','avc1.42E01F','avc1.42E028','avc1.42E029','avc1.42E032','avc1.42E033','avc1.42E034'];
+  const br=Math.round(W*H*fps*0.12);
+  let codec=null;
+  for(const c of levels){
+    try{const s=await VideoEncoder.isConfigSupported({codec:c,width:W,height:H,bitrate:br,framerate:fps,avc:{format:'avc'}});
+      if(s&&s.supported){codec=c;break;}}catch(e){}
+  }
+  if(!codec)throw new Error('H.264 encoding unavailable here — try WebM or PNG frames (.zip).');
+  const out=[];let avcC=null,encErr=null;
+  const encoder=new VideoEncoder({
+    output:(chunk,meta)=>{
+      if(meta&&meta.decoderConfig&&meta.decoderConfig.description&&!avcC)
+        avcC=new Uint8Array(meta.decoderConfig.description);
+      out.push({u8:_u8(chunk),key:chunk.type==='key'});
+    },
+    error:(e)=>{encErr=e}
+  });
+  encoder.configure({codec,width:W,height:H,bitrate:br,framerate:fps,avc:{format:'avc'},latencyMode:'quality'});
+  for(let f=0;f<frames;f++){
+    ANIM.t=f/fps;draw();
+    const vf=new VideoFrame(cv,{timestamp:Math.round(f*1e6/fps),duration:Math.round(1e6/fps)});
+    encoder.encode(vf);                                /* encoder picks the GOP (1st = keyframe) */
+    vf.close();
+    onFrame(f+1);
+    if(encErr)throw encErr;
+    while(encoder.encodeQueueSize>6)await _delay(0);
+  }
+  await encoder.flush();encoder.close();
+  if(encErr)throw encErr;
+  if(!out.length)throw new Error('Encoder produced no frames.');
+  if(!avcC)throw new Error('Browser gave no H.264 config — try WebM.');
+  return {blob:buildMP4(out,avcC,W,H,fps),ext:'mp4'};
+}
+
 /* Render every frame to PNG and bundle as a ZIP (always works). */
 async function exportPNGZip(frames,fps,onFrame){
   const files=[];
@@ -1329,6 +1428,8 @@ async function exportMotion(){
     let res;
     if(fmt==='webm'){
       res=await encodeWebM(frames,REC_FPS,onFrame);
+    }else if(fmt==='mp4'){
+      res=await encodeMP4(frames,REC_FPS,onFrame);
     }else{
       res=await exportPNGZip(frames,REC_FPS,onFrame);
     }
