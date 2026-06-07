@@ -242,6 +242,34 @@
     </div>
 
     <div class="group">
+      <div class="ttl">Motion</div>
+      <div class="sub" style="margin-bottom:10px">Each module animates with math fitting its form — orbits orbit, waves travel, fields breathe. <kbd>Space</kbd> toggles.</div>
+      <div class="btn-row">
+        <button id="motPlay">&#9654; Play</button>
+        <button id="motReset" class="alt">Reset</button>
+      </div>
+      <label>Speed <span class="v" id="motSpeedV">1.0×</span>
+        <input id="motSpeed" type="range" min="0.1" max="4" step="0.1" value="1"></label>
+      <label>Motion depth <span class="v" id="motDepthV">100%</span>
+        <input id="motDepth" type="range" min="0" max="200" step="5" value="100"></label>
+      <label>Clip length <span class="v" id="motLoopV">6s</span>
+        <input id="motLoop" type="range" min="1" max="20" step="1" value="6"></label>
+      <label>Export as
+        <select id="motFormat">
+          <option value="zip">PNG frames (.zip)</option>
+          <option value="webm">WebM video</option>
+        </select>
+      </label>
+      <div class="btn-row">
+        <button id="motRecord">&#9660; Export motion</button>
+      </div>
+      <div id="motProg" style="display:none;height:7px;background:#0e0e0e;border:1px solid #2a2a2a;margin-top:8px">
+        <div id="motProgBar" style="height:100%;width:0;background:var(--accent);transition:width .05s linear"></div>
+      </div>
+      <div class="foot" id="motStatus" style="margin-top:6px">Frame-by-frame at 24fps (exact, no dropped frames). PNG ZIP is lossless &amp; universal → <code>ffmpeg -framerate 24 -i frame_%04d.png -pix_fmt yuv420p out.mp4</code>. WebM needs Chrome/Edge.</div>
+    </div>
+
+    <div class="group">
       <div class="ttl">Canvas</div>
       <label>Width <span class="v" id="wv">1400</span>
         <input id="w" type="range" min="400" max="2400" step="10" value="1400"></label>
@@ -988,6 +1016,25 @@ const rint=(a,b)=>Math.floor(rnd(a,b+1));
 const pick=arr=>arr[Math.floor(rng()*arr.length)];
 const chance=p=>rng()<p;
 
+/* ============================================================
+   ANIMATION CLOCK
+   draw() re-seeds the RNG each frame, so the random layout is
+   identical frame-to-frame. Modules read ANIM.t (seconds) and
+   feed it only into deterministic math (phases, angles, waves) —
+   never into rng() — so structure holds still while motion flows.
+============================================================ */
+const TAU=Math.PI*2;
+const ANIM={playing:false,t:0,speed:1,raf:null,last:0,loop:6,amp:1};
+/* eased ping-pong 0..1..0 over a period p (seconds) */
+const pingpong=(p,ph=0)=>{const x=((ANIM.t/p+ph)%1+1)%1;return x<.5?x*2:2-x*2;};
+/* smooth 0..1 sawtooth (loops) — for travelling packets / scans */
+const phase01=(p,ph=0)=>(((ANIM.t/p+ph)%1)+1)%1;
+/* a gentle breathing multiplier centred on 1 */
+const breathe=(p,amt=.15,ph=0)=>1+Math.sin((ANIM.t/p+ph)*TAU)*amt;
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+/* wobble: time term pre-scaled by global motion depth (0 ⇒ static) */
+const wob=v=>v*ANIM.amp;
+
 /* ---------- canvas + state ---------- */
 const cv=document.getElementById('cv');
 let ctx=cv.getContext('2d');
@@ -1074,6 +1121,240 @@ $('random').onclick=()=>{ui.seed.value='r-'+Math.random().toString(36).slice(2,8
 $('modClearAll').onclick=()=>{Object.values(ui.modules).forEach(el=>{el.checked=false});draw()};
 $('export').onclick=()=>exportPNG(1);
 $('exportHi').onclick=()=>exportPNG(2);
+/* ---------- motion playback + recording ---------- */
+function animLoop(ts){
+  if(!ANIM.playing){ANIM.raf=null;return}
+  if(!ANIM.last)ANIM.last=ts;
+  const dt=Math.min(.05,(ts-ANIM.last)/1000);
+  ANIM.last=ts;
+  ANIM.t+=dt*ANIM.speed;
+  draw();
+  ANIM.raf=requestAnimationFrame(animLoop);
+}
+function setPlaying(v){
+  ANIM.playing=v;
+  const btn=$('motPlay');if(btn)btn.innerHTML=v?'&#10074;&#10074; Pause':'&#9654; Play';
+  if(v){ANIM.last=0;if(!ANIM.raf)ANIM.raf=requestAnimationFrame(animLoop)}
+}
+$('motPlay').onclick=()=>setPlaying(!ANIM.playing);
+$('motReset').onclick=()=>{ANIM.t=0;draw()};
+$('motSpeed').addEventListener('input',e=>{ANIM.speed=+e.target.value;$('motSpeedV').textContent=(+e.target.value).toFixed(1)+'×'});
+$('motDepth').addEventListener('input',e=>{ANIM.amp=+e.target.value/100;$('motDepthV').textContent=e.target.value+'%';if(!ANIM.playing)draw()});
+$('motLoop').addEventListener('input',e=>{ANIM.loop=+e.target.value;$('motLoopV').textContent=e.target.value+'s'});
+const REC_FPS=24;
+let __recording=false;
+function setProgress(pct){
+  const wrap=$('motProg'),bar=$('motProgBar');
+  if(!wrap)return;
+  wrap.style.display=pct<0?'none':'block';
+  if(pct>=0)bar.style.width=clamp(pct,0,100).toFixed(1)+'%';
+}
+const _delay=ms=>new Promise(r=>setTimeout(r,ms));
+const _nextPaint=()=>new Promise(r=>requestAnimationFrame(()=>r()));
+/* ---------- CRC32 + STORE ZIP writer (no deps) ----------
+   PNGs are already compressed, so we store them uncompressed — the resulting
+   .zip is byte-exact and assembles into video losslessly:
+   ffmpeg -framerate 24 -i frame_%04d.png -c:v libx264 -pix_fmt yuv420p out.mp4 */
+const _crcTable=(function(){const t=new Uint32Array(256);
+  for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[n]=c>>>0;}
+  return t;})();
+function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=_crcTable[(c^u8[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function makeZip(files){
+  const enc=new TextEncoder(), parts=[], central=[]; let offset=0;
+  for(const f of files){
+    const name=enc.encode(f.name), data=f.data, crc=crc32(data), size=data.length;
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0,true);
+    lh.setUint16(8,0,true);lh.setUint16(10,0,true);lh.setUint16(12,0x21,true);
+    lh.setUint32(14,crc,true);lh.setUint32(18,size,true);lh.setUint32(22,size,true);
+    lh.setUint16(26,name.length,true);lh.setUint16(28,0,true);
+    parts.push(new Uint8Array(lh.buffer),name,data);
+    const cd=new DataView(new ArrayBuffer(46));
+    cd.setUint32(0,0x02014b50,true);cd.setUint16(4,20,true);cd.setUint16(6,20,true);
+    cd.setUint16(8,0,true);cd.setUint16(10,0,true);cd.setUint16(12,0,true);cd.setUint16(14,0x21,true);
+    cd.setUint32(16,crc,true);cd.setUint32(20,size,true);cd.setUint32(24,size,true);
+    cd.setUint16(28,name.length,true);cd.setUint16(30,0,true);cd.setUint16(32,0,true);
+    cd.setUint16(34,0,true);cd.setUint16(36,0,true);cd.setUint32(38,0,true);cd.setUint32(42,offset,true);
+    central.push(new Uint8Array(cd.buffer),name);
+    offset+=30+name.length+size;
+  }
+  let cSize=0;for(const p of central)cSize+=p.length;
+  const eo=new DataView(new ArrayBuffer(22));
+  eo.setUint32(0,0x06054b50,true);eo.setUint16(4,0,true);eo.setUint16(6,0,true);
+  eo.setUint16(8,files.length,true);eo.setUint16(10,files.length,true);
+  eo.setUint32(12,cSize,true);eo.setUint32(16,offset,true);eo.setUint16(20,0,true);
+  return new Blob(parts.concat(central,[new Uint8Array(eo.buffer)]),{type:'application/zip'});
+}
+
+/* ---------- minimal EBML / WebM muxer for pre-encoded VP8/VP9 frames ----------
+   Frames come straight from WebCodecs (valid bitstream — no WebP/RIFF hack), and
+   each carries a FIXED duration, so timing = frameCount ÷ fps regardless of how
+   long rendering took. */
+function _ebmlNum(num){const parts=[];if(num===0)parts.push(0);while(num>0){parts.push(num&0xff);num=Math.floor(num/256);}return new Uint8Array(parts.reverse());}
+function _ebmlBits(bits){const data=[];const pad=(bits.length%8)?(new Array(1+8-bits.length%8)).join('0'):'';bits=pad+bits;for(let i=0;i<bits.length;i+=8)data.push(parseInt(bits.substr(i,8),2));return new Uint8Array(data);}
+function _ebmlStr(str){const a=new Uint8Array(str.length);for(let i=0;i<str.length;i++)a[i]=str.charCodeAt(i)&0xff;return a;}
+function _ebmlDouble(num){return new Uint8Array(new Float64Array([num]).buffer).slice().reverse();}
+function _concatU8(list){
+  let n=0;for(const a of list)n+=a.length;
+  const out=new Uint8Array(n);let o=0;
+  for(const a of list){out.set(a,o);o+=a.length;}
+  return out;
+}
+/* EBML data-size as a variable-length integer (correct at powers of two too). */
+function _ebmlSize(len){
+  let L=1;while(len>=Math.pow(2,7*L)-1)L++;          /* all-ones is reserved ⇒ strict >= */
+  const bytes=new Uint8Array(L);let v=len;
+  for(let i=L-1;i>=0;i--){bytes[i]=v&0xff;v=Math.floor(v/256);}
+  bytes[0]|=(1<<(8-L));                              /* length-marker bit */
+  return bytes;
+}
+function generateEBML(json){
+  const parts=[];                                    /* list of Uint8Array pieces */
+  for(const node of json){
+    let data=node.data;
+    if(Array.isArray(data))data=generateEBML(data);  /* child elements ⇒ Uint8Array */
+    else if(typeof data==='number')data=_ebmlBits(data.toString(2));
+    else if(typeof data==='string')data=_ebmlStr(data);
+    /* data is now a Uint8Array (leaf) */
+    parts.push(_ebmlNum(node.id),_ebmlSize(data.length),data);
+  }
+  return _concatU8(parts);
+}
+function _simpleBlock(trackNum,timecode,keyframe,frameU8){
+  let flags=0;if(keyframe)flags|=128;
+  const head=[trackNum|0x80,(timecode>>8)&0xff,timecode&0xff,flags];
+  const out=new Uint8Array(head.length+frameU8.length);
+  out.set(head,0);out.set(frameU8,head.length);return out;
+}
+function muxWebM(frames,width,height,codecId){
+  /* frames: [{u8:Uint8Array, durationMs:number, keyframe:bool}] */
+  let total=0;for(const f of frames)total+=f.durationMs;
+  const EBML=[
+    {id:0x1a45dfa3,data:[
+      {data:1,id:0x4286},{data:1,id:0x42f7},{data:4,id:0x42f2},{data:8,id:0x42f3},
+      {data:"webm",id:0x4282},{data:2,id:0x4287},{data:2,id:0x4285}]},
+    {id:0x18538067,data:[
+      {id:0x1549a966,data:[
+        {data:1e6,id:0x2ad7b1},{data:"RisoGen",id:0x4d80},{data:"RisoGen",id:0x5741},
+        {data:_ebmlDouble(total),id:0x4489}]},
+      {id:0x1654ae6b,data:[
+        {id:0xae,data:[
+          {data:1,id:0xd7},{data:1,id:0x73c5},{data:0,id:0x9c},{data:"und",id:0x22b59c},
+          {data:codecId,id:0x86},{data:1,id:0x83},
+          {id:0xe0,data:[{data:width,id:0xb0},{data:height,id:0xba}]}]}]}
+    ]}];
+  const segment=EBML[1];
+  let i=0, clusterTimecode=0;
+  const CLUSTER_MAX=30000;
+  while(i<frames.length){
+    const blocks=[{data:clusterTimecode,id:0xe7}];
+    let local=0, dur=0;
+    do{
+      const fr=frames[i];
+      blocks.push({data:_simpleBlock(1,Math.round(local),fr.keyframe,fr.u8),id:0xa3});
+      local+=fr.durationMs;dur+=fr.durationMs;i++;
+    }while(i<frames.length&&dur<CLUSTER_MAX);
+    segment.data.push({id:0x1f43b675,data:blocks});
+    clusterTimecode+=dur;
+  }
+  return new Blob([generateEBML(EBML)],{type:'video/webm'});
+}
+
+function _u8(chunk){const u=new Uint8Array(chunk.byteLength);chunk.copyTo(u);return u;}
+
+/* Encode rendered frames with WebCodecs at a fixed timestep, then mux to WebM.
+   Frame timing is fixed by frame count ÷ fps — independent of render speed. */
+async function encodeWebM(frames,fps,onFrame){
+  if(typeof VideoEncoder==='undefined'||typeof VideoFrame==='undefined')
+    throw new Error('WebCodecs unavailable in this browser — use PNG frames (.zip).');
+  const W=cv.width,H=cv.height;
+  /* VP8 first — no level/resolution limits, encodes any canvas size reliably */
+  const want=[['vp8','V_VP8'],['vp09.00.10.08','V_VP9']];
+  let codec=null,codecId=null;
+  for(const [c,id] of want){
+    try{const s=await VideoEncoder.isConfigSupported({codec:c,width:W,height:H,bitrate:1e6,framerate:fps});
+      if(s&&s.supported){codec=c;codecId=id;break;}}catch(e){}
+  }
+  if(!codec)throw new Error('No VP8/VP9 encoder available — use PNG frames (.zip).');
+
+  const out=[];let encErr=null;
+  const encoder=new VideoEncoder({
+    output:(chunk)=>{out.push({u8:_u8(chunk),durationMs:1000/fps,keyframe:chunk.type==='key'});},
+    error:(e)=>{encErr=e}
+  });
+  encoder.configure({codec,width:W,height:H,bitrate:Math.round(W*H*fps*0.15),framerate:fps,latencyMode:'quality'});
+  for(let f=0;f<frames;f++){
+    ANIM.t=f/fps;draw();
+    const vf=new VideoFrame(cv,{timestamp:Math.round(f*1e6/fps),duration:Math.round(1e6/fps)});
+    encoder.encode(vf,{keyFrame:true});      /* every frame a keyframe ⇒ trivially valid blocks */
+    vf.close();
+    onFrame(f+1);
+    if(encErr)throw encErr;
+    while(encoder.encodeQueueSize>6)await _delay(0);
+  }
+  await encoder.flush();encoder.close();
+  if(encErr)throw encErr;
+  if(!out.length)throw new Error('Encoder produced no frames.');
+  return {blob:muxWebM(out,W,H,codecId),ext:'webm'};
+}
+
+/* Render every frame to PNG and bundle as a ZIP (always works). */
+async function exportPNGZip(frames,fps,onFrame){
+  const files=[];
+  for(let f=0;f<frames;f++){
+    ANIM.t=f/fps;draw();
+    const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
+    if(!blob)throw new Error('toBlob failed.');
+    files.push({name:'frame_'+String(f+1).padStart(4,'0')+'.png',
+                data:new Uint8Array(await blob.arrayBuffer())});
+    onFrame(f+1);
+    if((f&1)===0)await _nextPaint();
+  }
+  return {blob:makeZip(files),ext:'zip'};
+}
+
+/* dispatcher */
+async function exportMotion(){
+  if(__recording)return;
+  const status=$('motStatus'),btn=$('motRecord'),fmt=$('motFormat').value;
+  __recording=true;
+  const wasPlaying=ANIM.playing, savedT=ANIM.t;
+  setPlaying(false);
+  btn.disabled=true;setProgress(0);
+  const frames=Math.max(1,Math.round(ANIM.loop*REC_FPS));
+  const setMsg=m=>{status.textContent=m};
+  const onFrame=n=>{setProgress(n/frames*92);setMsg('Rendering frame '+n+' / '+frames+
+    (fmt==='zip'?' (PNG)':' (encoding)'));};
+  try{
+    let res;
+    if(fmt==='webm'){
+      res=await encodeWebM(frames,REC_FPS,onFrame);
+    }else{
+      res=await exportPNGZip(frames,REC_FPS,onFrame);
+    }
+    setMsg('Packaging '+frames+' frames…');setProgress(97);await _delay(20);
+    setProgress(100);
+    const a=document.createElement('a');
+    a.download=`risogen-motion-${ui.seed.value||'riso'}-${REC_FPS}fps.${res.ext}`;
+    a.href=URL.createObjectURL(res.blob);a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+    setMsg('Saved '+(frames/REC_FPS).toFixed(1)+'s · '+(res.blob.size/1048576).toFixed(1)+' MB ('+res.ext.toUpperCase()+').');
+  }catch(err){
+    setMsg('Export failed: '+(err&&err.message?err.message:err));
+  }
+  __recording=false;
+  btn.disabled=false;setProgress(-1);
+  ANIM.t=wasPlaying?savedT:0;
+  if(wasPlaying)setPlaying(true);else draw();
+}
+$('motRecord').onclick=exportMotion;
+window.addEventListener('keydown',e=>{
+  if(e.code!=='Space')return;
+  const t=e.target,tag=t&&t.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||(t&&t.isContentEditable))return;
+  e.preventDefault();setPlaying(!ANIM.playing);
+});
+
 $('soloDraw').onclick=()=>drawSolo(false);
 $('soloExport').onclick=()=>drawSolo(true);
 $('soloExportTransparent').onclick=drawSoloTransparent;
@@ -1271,14 +1552,19 @@ function gridRegions(W,H,rows,cols,pad){
 
 function modHex(box,col){
   const r=rnd(8,18),ink=hexToRgb(col);
+  const T=ANIM.t,A=ANIM.amp;
   ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
-  strokeInk(ink,.9,1);
   const w=Math.sqrt(3)*r,h=2*r*.75;
+  /* radial honeycomb pulse — brightness ripples outward from box centre */
+  const ccx=box.x+box.w/2, ccy=box.y+box.h/2;
   for(let y=box.y-r;y<box.y+box.h+r;y+=h){
     for(let x=box.x-r;x<box.x+box.w+r;x+=w){
       const ox=((Math.round((y-box.y)/h))%2)?w/2:0;
+      const d=Math.hypot(x+ox-ccx,y-ccy);
+      const wv=0.5+0.5*Math.sin(d*0.035 - T*2.4);
+      strokeInk(ink,.9-A*0.55*(1-wv),1);
       hexPath(x+ox,y,r);ctx.stroke()}}
-  if(chance(.3)){fillInk(ink,.85);
+  if(chance(.3)){fillInk(ink,.85*(1-A*0.4*(0.5-0.5*Math.cos(T*1.6))));
     const fx=box.x+rnd(0,box.w*.6),fy=box.y+rnd(0,box.h*.6);
     const fw=rnd(box.w*.2,box.w*.5),fh=rnd(box.h*.15,box.h*.4);
     ctx.fillRect(fx,fy,fw,fh)}
@@ -1294,13 +1580,18 @@ function hexPath(cx,cy,r){
 
 function modTri(box,col){
   const s=rnd(10,20),ink=hexToRgb(col);
+  const T=ANIM.t,A=ANIM.amp;
   ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
   strokeInk(ink,.9,1);
   const h=s*Math.sqrt(3)/2;
   for(let y=box.y;y<box.y+box.h+h;y+=h){
     const row=Math.round((y-box.y)/h),off=(row%2)?s/2:0;
     for(let x=box.x-s;x<box.x+box.w+s;x+=s){
-      const xx=x+off;ctx.beginPath();
+      const xx=x+off;
+      /* diagonal shear wave sweeping across the tessellation */
+      const wv=0.5+0.5*Math.sin((xx-box.x)*0.02+(y-box.y)*0.01 - T*2.0);
+      strokeInk(ink,.9-A*0.6*(1-wv),1);
+      ctx.beginPath();
       if(row%2){ctx.moveTo(xx,y);ctx.lineTo(xx+s,y);ctx.lineTo(xx+s/2,y-h)}
       else{ctx.moveTo(xx,y);ctx.lineTo(xx+s,y);ctx.lineTo(xx+s/2,y+h)}
       ctx.closePath();ctx.stroke()}}
@@ -1314,17 +1605,24 @@ function modTri(box,col){
 
 function modSq(box,col){
   const s=rnd(8,18),ink=hexToRgb(col);
+  const T=ANIM.t,A=ANIM.amp;
   ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
-  strokeInk(ink,.85,1);
+  /* raster scan — a vertical sweep brightens lines as it passes */
+  const scanX=box.x+(phase01(2.8)*1.2-.1)*box.w;
   for(let x=box.x;x<box.x+box.w;x+=s){
+    const near=Math.exp(-Math.pow((x-scanX)/(box.w*.12),2));
+    strokeInk(ink,.85+A*(.15+.6*near)-A*.15,1);
     ctx.beginPath();ctx.moveTo(x,box.y);ctx.lineTo(x,box.y+box.h);ctx.stroke()}
+  strokeInk(ink,.85,1);
   for(let y=box.y;y<box.y+box.h;y+=s){
     ctx.beginPath();ctx.moveTo(box.x,y);ctx.lineTo(box.x+box.w,y);ctx.stroke()}
-  if(chance(.5)){fillInk(ink,.85);
+  if(chance(.5)){
     const cells=rint(3,10);
     for(let i=0;i<cells;i++){
       const cx=box.x+Math.floor(rnd(0,box.w/s))*s;
       const cy=box.y+Math.floor(rnd(0,box.h/s))*s;
+      /* cells blink in a per-cell phase like loading data */
+      fillInk(ink,.85*(1-A*0.7*(0.5-0.5*Math.sin(T*3+ (cx*0.05+cy*0.07)))));
       ctx.fillRect(cx,cy,s,s)}}
   ctx.restore();
 }
@@ -1336,14 +1634,17 @@ function modMesh(box,col){
   const cols=rint(14,28),rows=rint(10,20);
   const twist=rnd(.2,1.6),bend=rnd(.2,.8);
   const cx=box.x+box.w/2,cy=box.y+box.h/2;
+  const T=ANIM.t;
+  /* cloth in wind — the warp phases advance, twist breathes */
+  const tw=twist+wob(0.35*Math.sin(T*0.7));
   const pts=[];
   for(let j=0;j<=rows;j++){pts[j]=[];
     for(let i=0;i<=cols;i++){
       const u=i/cols,v=j/rows;
       let x=box.x+u*box.w,y=box.y+v*box.h;
-      const dy=(y-cy)/box.h,ang=dy*twist*Math.PI;
-      x=cx+(x-cx)*Math.cos(ang)+Math.sin(v*Math.PI*2)*box.w*bend*.05;
-      y=y+Math.sin(u*Math.PI*3+v*4)*box.h*bend*.04;
+      const dy=(y-cy)/box.h,ang=dy*tw*Math.PI;
+      x=cx+(x-cx)*Math.cos(ang)+Math.sin(v*Math.PI*2+wob(T*1.5))*box.w*bend*.05;
+      y=y+Math.sin(u*Math.PI*3+v*4+wob(T*1.2))*box.h*bend*.04;
       pts[j][i]={x,y}}}
   for(let j=0;j<=rows;j++){ctx.beginPath();
     for(let i=0;i<=cols;i++){const p=pts[j][i];i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)}ctx.stroke()}
@@ -1361,12 +1662,14 @@ function modPix(box,col){
     ctx.beginPath();ctx.moveTo(x,box.y);ctx.lineTo(x,box.y+box.h);ctx.stroke()}
   for(let y=box.y;y<box.y+box.h;y+=s){
     ctx.beginPath();ctx.moveTo(box.x,y);ctx.lineTo(box.x+box.w,y);ctx.stroke()}
-  fillInk(ink,.9);
+  const T=ANIM.t,A=ANIM.amp;
   const blobs=rint(2,5);
   for(let b=0;b<blobs;b++){
     const bx=box.x+Math.floor(rnd(0,box.w*.7)/s)*s;
     const by=box.y+Math.floor(rnd(0,box.h*.7)/s)*s;
     const bw=Math.floor(rnd(2,8))*s,bh=Math.floor(rnd(2,8))*s;
+    /* blocks blink in / out like a loading sprite */
+    fillInk(ink,.9*(1-A*0.5*(0.5-0.5*Math.sin(T*2.6+b*1.7))));
     ctx.fillRect(bx,by,bw,bh);
     if(chance(.6)){ctx.save();ctx.globalCompositeOperation='destination-out';
       const nx=bx+Math.floor(rnd(0,bw/s))*s;
@@ -1385,11 +1688,21 @@ function modNet(box,colA,colB){
     ctx.beginPath();ctx.moveTo(x,box.y);ctx.lineTo(x,box.y+box.h);ctx.stroke()}
   const n=rint(14,26),nodes=[];
   for(let i=0;i<n;i++)nodes.push({x:box.x+rnd(box.w*.05,box.w*.95),y:box.y+rnd(box.h*.08,box.h*.92)});
+  const T=ANIM.t,A=ANIM.amp;
   strokeInk(inkB,.85,1.1);
   for(let i=0;i<n;i++){const deg=rint(2,4);
     for(let k=0;k<deg;k++){const j=rint(0,n-1);if(j===i)continue;
-      ctx.beginPath();ctx.moveTo(nodes[i].x,nodes[i].y);ctx.lineTo(nodes[j].x,nodes[j].y);ctx.stroke()}}
-  fillInk(inkB,1);for(const p of nodes){ctx.beginPath();ctx.arc(p.x,p.y,2.2,0,Math.PI*2);ctx.fill()}
+      strokeInk(inkB,.85,1.1);
+      ctx.beginPath();ctx.moveTo(nodes[i].x,nodes[i].y);ctx.lineTo(nodes[j].x,nodes[j].y);ctx.stroke();
+      if(A>0){/* packet riding the wire */
+        const tt=phase01(1.9,i*0.13+k*0.37);
+        const px=nodes[i].x+(nodes[j].x-nodes[i].x)*tt;
+        const py=nodes[i].y+(nodes[j].y-nodes[i].y)*tt;
+        fillInk(inkB,.9*A);ctx.beginPath();ctx.arc(px,py,2.6,0,Math.PI*2);ctx.fill();}
+    }}
+  for(let p=0;p<n;p++){const nd=nodes[p];
+    fillInk(inkB,1);
+    ctx.beginPath();ctx.arc(nd.x,nd.y,2.2+A*1.6*(0.5+0.5*Math.sin(T*3+p*0.9)),0,Math.PI*2);ctx.fill()}
   ctx.fillStyle=rgba(inkA,.95);ctx.font='600 11px "IBM Plex Mono",monospace';
   for(let i=0;i<14;i++){const tx=box.x+rnd(0,box.w-30),ty=box.y+rnd(8,box.h-6);
     ctx.save();if(chance(.4))ctx.translate(tx,ty),ctx.rotate(-Math.PI/2);
@@ -1400,8 +1713,12 @@ function modNet(box,colA,colB){
 function modTable(box,colA){
   const inkA=hexToRgb(colA);
   ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
-  strokeInk(inkA,.7,1);
   const colW=box.w/4;
+  const A=ANIM.amp;
+  if(A>0){/* selection cursor stepping column to column */
+    const hc=Math.floor(phase01(3.6)*4)%4;
+    fillInk(inkA,.12*A);ctx.fillRect(box.x+hc*colW,box.y,colW,box.h);}
+  strokeInk(inkA,.7,1);
   for(let i=1;i<4;i++){const x=box.x+i*colW;
     ctx.beginPath();ctx.moveTo(x,box.y);ctx.lineTo(x,box.y+box.h);ctx.stroke()}
   ctx.fillStyle=rgba(inkA,.95);
@@ -1422,9 +1739,15 @@ function modTyped(box,colA){
   ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
   ctx.fillStyle=rgba(inkA,.9);ctx.font='600 9px "IBM Plex Mono",monospace';
   const lines=rint(4,7);
+  let lastX=box.x,lastY=box.y;
   for(let i=0;i<lines;i++){let s='';const wc=rint(2,5);
     for(let w=0;w<wc;w++)s+=pickText()+' ';
-    ctx.fillText(s,box.x+rnd(0,8),box.y+12+i*11)}
+    const x=box.x+rnd(0,8),y=box.y+12+i*11;
+    ctx.fillText(s,x,y);
+    if(i===lines-1){lastX=x+ctx.measureText(s).width;lastY=y}}
+  /* terminal caret blink */
+  if(ANIM.amp>0&&((ANIM.t*1.6)%1)<.5){
+    fillInk(inkA,.9*ANIM.amp);ctx.fillRect(lastX+1,lastY-7,5,8)}
   ctx.restore();
 }
 
@@ -1449,6 +1772,11 @@ function modHeader(box,col){
     ctx.fillText(b[1],box.x+(i+1)*colW+8,box.y+box.h-18)}
   ctx.font='600 9px "IBM Plex Mono",monospace';
   ctx.fillText('Herausgegeben vom · Édité par',box.x+8,box.y+box.h-4);
+  /* a bright index sweeps the baseline rule */
+  if(ANIM.amp>0){const sx=box.x+phase01(3)*box.w;
+    strokeInk(ink,ANIM.amp,2.6);
+    ctx.beginPath();ctx.moveTo(sx,box.y+box.h-2);
+    ctx.lineTo(Math.min(box.x+box.w,sx+box.w*.12),box.y+box.h-2);ctx.stroke();}
   ctx.restore();
 }
 
@@ -1507,16 +1835,20 @@ function modDgVec(box,colA,colB){
   const inkB=hexToRgb(colB);
   strokeInk(inkB,.95,1.4);fillInk(inkB,.95);
   const cols=6;
+  const T=ANIM.t;
   for(let side=0;side<2;side++){
     const dir=side?1:-1;
     for(let i=0;i<cols;i++){
       const startX=cx+dir*(8+i*4);
       const startY=baseY-5;
-      const endX=startX+dir*(box.w*.18+i*box.w*.02);
-      const endY=startY-box.h*.35-i*box.h*.04;
+      /* field magnitude breathes, control point sways */
+      const gr=1+wob(0.2*Math.sin(T*1.8-i*0.5-side*1.3));
+      const endX=startX+dir*(box.w*.18+i*box.w*.02)*gr;
+      const endY=startY-(box.h*.35+i*box.h*.04)*gr;
+      const sway=wob(box.w*.035*Math.sin(T*2.0+i*0.6+side));
       ctx.beginPath();
       ctx.moveTo(startX,startY);
-      ctx.quadraticCurveTo(startX,endY+20,endX,endY);
+      ctx.quadraticCurveTo(startX+sway,endY+20,endX,endY);
       ctx.stroke();
       arrow({x:endX-dir,y:endY},{x:endX,y:endY},6);
     }
@@ -1545,16 +1877,21 @@ function modDgLis(box,col){
   /* nested curves inside diamond */
   strokeInk(ink,.85,1);
   const layers=rint(4,8);
+  const T=ANIM.t,A=ANIM.amp;
   for(let k=1;k<=layers;k++){
     const t=k/(layers+1);
+    /* each ring morphs diamond↔circle and counter-rotates */
+    const morph=A*(0.5+0.5*Math.sin(T*0.9+k*0.5));
+    const rot=A*Math.sin(T*0.5)*(k%2?1:-1)*0.6;
     ctx.beginPath();
     const N=80;
     for(let i=0;i<=N;i++){
       const a=i/N*Math.PI*2;
-      const cs=Math.abs(Math.cos(a))+Math.abs(Math.sin(a));
+      const csd=Math.abs(Math.cos(a))+Math.abs(Math.sin(a));
+      const cs=csd*(1-morph)+morph;
       const rr=r*t/cs;
-      const x=cx+Math.cos(a)*rr;
-      const y=cy+Math.sin(a)*rr;
+      const x=cx+Math.cos(a+rot)*rr;
+      const y=cy+Math.sin(a+rot)*rr;
       i?ctx.lineTo(x,y):ctx.moveTo(x,y);
     }
     ctx.stroke();
@@ -1577,10 +1914,10 @@ function modDgCage(box,colA,colB){
   /* arched cage above */
   strokeInk(inkB,.95,1.3);
   const cols=rint(8,12);
+  const T=ANIM.t,A=ANIM.amp;
   for(let i=0;i<=cols;i++){
     const t=i/cols;
     const x=cx-w/2+t*w;
-    const apexY=midY-h+Math.sin(t*Math.PI)* -h*.05;
     ctx.beginPath();
     ctx.moveTo(x,midY);
     ctx.bezierCurveTo(x,midY-h*.6,x,midY-h*.9,cx,midY-h);
@@ -1588,6 +1925,11 @@ function modDgCage(box,colA,colB){
     /* dot at top arc */
     fillInk(inkB,1);
     ctx.beginPath();ctx.arc(x,midY,2,0,Math.PI*2);ctx.fill();
+    if(A>0){/* charge climbing the rib toward the apex */
+      const tt=phase01(2.4,t*0.6),it=1-tt;
+      const bx=it*it*it*x+3*it*it*tt*x+3*it*tt*tt*x+tt*tt*tt*cx;
+      const by=it*it*it*midY+3*it*it*tt*(midY-h*.6)+3*it*tt*tt*(midY-h*.9)+tt*tt*tt*(midY-h);
+      fillInk(inkB,A);ctx.beginPath();ctx.arc(bx,by,2.6,0,Math.PI*2);ctx.fill();}
   }
   /* downward arrows below plane */
   fillInk(inkB,1);strokeInk(inkB,.95,1.2);
@@ -1635,7 +1977,7 @@ function modDgFun(box,colA,colB){
       const u=i/N;
       const x=box.x+box.w*.1+u*box.w*.4;
       const env=Math.sin(u*Math.PI);
-      const y=cy+Math.sin(u*freq*Math.PI)*amp*env;
+      const y=cy+Math.sin(u*freq*Math.PI-wob(ANIM.t*2.6)+k*0.4)*amp*env;
       i?ctx.lineTo(x,y):ctx.moveTo(x,y);
     }
     ctx.stroke();
@@ -1659,7 +2001,7 @@ function modDgHel(box,colA,colB){
     const N=80;
     for(let i=0;i<=N;i++){
       const u=z0+(z1-z0)*i/N;
-      const a=u*Math.PI*2*turns;
+      const a=u*Math.PI*2*turns-wob(ANIM.t*3.0);
       const x=cx-len/2+u*len;
       const y=cy+Math.sin(a)*amp;
       i?ctx.lineTo(x,y):ctx.moveTo(x,y);
@@ -1721,6 +2063,16 @@ function modDgHour(box,col){
   arrowLine({x:cx,y:cy},{x:cx,y:cy+h*1.15+12},6);
   /* center dot */
   ctx.beginPath();ctx.arc(cx,cy,2.5,0,Math.PI*2);ctx.fill();
+  /* falling sand — grains accelerate from the top cup, pinch at the neck */
+  if(ANIM.amp>0){fillInk(ink,.85*ANIM.amp);
+    const grains=14;
+    for(let gi=0;gi<grains;gi++){
+      const ph=phase01(1.5,gi*0.111);
+      const yy=cy-h+ph*ph*(2*h);              /* gravity easing */
+      const spread=(Math.abs(yy-cy)/h)*w*.34;  /* converge to neck */
+      const xx=cx+Math.sin(gi*2.4+yy*0.05)*spread;
+      ctx.beginPath();ctx.arc(xx,yy,1.5,0,Math.PI*2);ctx.fill();
+    }}
   ctx.restore();
 }
 
@@ -1731,7 +2083,9 @@ function modCube(box,col){
   const cx=box.x+box.w/2,cy=box.y+box.h/2;
   const s=Math.min(box.w,box.h)*.42;
   const div=rint(4,7);
-  const vp={x:cx,y:cy};
+  const T=ANIM.t;
+  /* vanishing point orbits — the box appears to swivel in depth */
+  const vp={x:cx+wob(s*0.42*Math.sin(T*0.7)),y:cy+wob(s*0.30*Math.cos(T*0.9))};
   const front=[];const back=[];
   for(let j=0;j<=div;j++)for(let i=0;i<=div;i++){
     const fx=cx-s+i*(2*s/div),fy=cy-s+j*(2*s/div);
@@ -1786,6 +2140,7 @@ function modState(box,col){
   }
   /* curved arrows */
   fillInk(ink,1);
+  const T=ANIM.t,A=ANIM.amp;
   for(let i=0;i<n;i++){
     const a=nodes[i], b=nodes[(i+rint(1,2))%n];
     const dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy);if(d<1)continue;
@@ -1802,6 +2157,12 @@ function modState(box,col){
     ctx.lineTo(ex-Math.cos(aa-.4)*7,ey-Math.sin(aa-.4)*7);
     ctx.lineTo(ex-Math.cos(aa+.4)*7,ey-Math.sin(aa+.4)*7);
     ctx.closePath();ctx.fill();
+    if(A>0){/* token transiting the edge (quadratic) */
+      const tt=phase01(2.3,i*0.21),it=1-tt;
+      const px=it*it*sx+2*it*tt*mx+tt*tt*ex;
+      const py=it*it*sy+2*it*tt*my+tt*tt*ey;
+      fillInk(ink,A);ctx.beginPath();ctx.arc(px,py,3.4,0,Math.PI*2);ctx.fill();
+      fillInk(ink,1);}
   }
   /* labels */
   ctx.fillStyle=rgba(ink,1);
@@ -1834,7 +2195,7 @@ function modStep(box,col){
   ctx.beginPath();
   for(let i=0;i<=200;i++){
     const u=i/200, x=box.x+u*box.w;
-    const y=baselineY+Math.sin(u*Math.PI*4)*(bottom-top)*.3;
+    const y=baselineY+Math.sin(u*Math.PI*4-wob(ANIM.t*2.2))*(bottom-top)*.3;
     i?ctx.lineTo(x,y):ctx.moveTo(x,y);
   }
   ctx.stroke();ctx.setLineDash([]);
@@ -1855,6 +2216,13 @@ function modStep(box,col){
     const y=top+(1-vals[i])*(bottom-top);
     ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);ctx.fill();
   }
+  /* playhead sweeping the trace */
+  if(ANIM.amp>0){const px=box.x+phase01(4.5)*box.w;
+    strokeInk(ink,.7*ANIM.amp,1.4);
+    ctx.beginPath();ctx.moveTo(px,top);ctx.lineTo(px,bottom);ctx.stroke();
+    const idx=clamp(Math.round((px-box.x)/cw-.5),0,cells-1);
+    const y=top+(1-vals[idx])*(bottom-top);
+    fillInk(ink,ANIM.amp);ctx.beginPath();ctx.arc(box.x+(idx+.5)*cw,y,5,0,Math.PI*2);ctx.fill();}
   /* axis numbers */
   ctx.fillStyle=rgba(ink,.95);
   ctx.font='600 10px "IBM Plex Mono",monospace';
@@ -1879,7 +2247,7 @@ function modPhase(box,col){
   for(let i=0;i<=N;i++){
     const u=i/N, x=box.x+u*box.w;
     const env=Math.exp(-Math.pow((u-.5)*2.5,2));
-    const y=cy+Math.sin(u*Math.PI*4)*amp*env;
+    const y=cy+Math.sin(u*Math.PI*4-wob(ANIM.t*3.0))*amp*env;
     i?ctx.lineTo(x,y):ctx.moveTo(x,y);
   }
   ctx.stroke();
@@ -1889,7 +2257,7 @@ function modPhase(box,col){
   for(let i=0;i<=N;i++){
     const u=i/N, x=box.x+u*box.w;
     const env=Math.exp(-Math.pow((u-.5)*2.5,2));
-    const y=cy+Math.sin(u*Math.PI*4+Math.PI*.5)*amp*env*.7;
+    const y=cy+Math.sin(u*Math.PI*4+Math.PI*.5-wob(ANIM.t*3.0))*amp*env*.7;
     i?ctx.lineTo(x,y):ctx.moveTo(x,y);
   }
   ctx.stroke();ctx.setLineDash([]);
@@ -1934,6 +2302,10 @@ function modLabel(box,colA,colB){
     const tl=(i%5===0)?6:3;
     ctx.beginPath();ctx.moveTo(x,box.y+box.h-2);ctx.lineTo(x,box.y+box.h-2-tl);ctx.stroke();
   }
+  /* sweep cursor scanning the scale (ping-pong, like a meter needle) */
+  if(ANIM.amp>0){const sx=box.x+pingpong(3.2)*box.w;
+    strokeInk(ink,ANIM.amp,2.2);
+    ctx.beginPath();ctx.moveTo(sx,box.y+box.h-2);ctx.lineTo(sx,box.y+box.h-14);ctx.stroke();}
   ctx.restore();
 }
 
@@ -1967,9 +2339,10 @@ function modOsc(box,colA){
     const cxo=cx+rnd(-W*.1,W*.1),cyo=cy+rnd(-H*.1,H*.1);
     ctx.beginPath();
     const N=400;
+    const dph=wob(ANIM.t*1.6);
     for(let i=0;i<N;i++){
       const u=i/(N-1)*Math.PI*2;
-      const x=cxo+Math.sin(a*u+ph)*ax;
+      const x=cxo+Math.sin(a*u+ph+dph)*ax;
       const y=cyo+Math.cos(b*u)*ay;
       i?ctx.lineTo(x,y):ctx.moveTo(x,y);
     }
@@ -1996,7 +2369,8 @@ function modRings(box,colA,colB){
     ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.stroke();
     ctx.restore();
     fillInk(ink,1);
-    const ang=rnd(0,Math.PI*2);
+    /* Keplerian: inner rings sweep faster */
+    const ang=rnd(0,Math.PI*2)+wob(ANIM.t*(1.6-i*0.13));
     const px=cx+Math.cos(rot)*Math.cos(ang)*r-Math.sin(rot)*Math.sin(ang)*r*tilt;
     const py=cy+Math.sin(rot)*Math.cos(ang)*r+Math.cos(rot)*Math.sin(ang)*r*tilt;
     ctx.beginPath();ctx.arc(px,py,rnd(2,4),0,Math.PI*2);ctx.fill();
@@ -2013,12 +2387,16 @@ function modParts(box,col){
   ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
   const density=rnd(.0008,.0025);
   const count=Math.floor(box.w*box.h*density);
+  const T=ANIM.t;
   for(let i=0;i<count;i++){
     const x=box.x+rng()*box.w,y=box.y+rng()*box.h;
     const r=rng()<.7?1:2;
+    /* per-particle thermal jitter */
+    const bx=x+wob(Math.sin(T*1.4+x*0.05+y*0.03)*4);
+    const by=y+wob(Math.cos(T*1.2+y*0.04-x*0.02)*4);
     fillInk(ink,rnd(.4,1));
-    if(chance(.6))ctx.fillRect(x,y,r,r);
-    else{ctx.beginPath();ctx.arc(x,y,r*.8,0,Math.PI*2);ctx.fill()}
+    if(chance(.6))ctx.fillRect(bx,by,r,r);
+    else{ctx.beginPath();ctx.arc(bx,by,r*.8,0,Math.PI*2);ctx.fill()}
   }
   if(chance(.7)){
     const ccx=box.x+rnd(box.w*.2,box.w*.8);
@@ -2028,7 +2406,9 @@ function modParts(box,col){
     for(let i=0;i<np;i++){
       const a=rng()*Math.PI*2;
       const d=Math.pow(rng(),1.8)*cr;
-      const x=ccx+Math.cos(a)*d,y=ccy+Math.sin(a)*d;
+      /* differential rotation — inner ring swirls faster */
+      const sw=wob(T*0.7*(1-d/cr*0.6));
+      const x=ccx+Math.cos(a+sw)*d,y=ccy+Math.sin(a+sw)*d;
       fillInk(ink,rnd(.4,.95));
       ctx.beginPath();ctx.arc(x,y,1.6,0,Math.PI*2);ctx.fill();
     }
@@ -2053,8 +2433,8 @@ function modStream(box,col){
       const u=i/N;
       const x=box.x+u*box.w;
       const env=Math.sin(u*Math.PI);
-      const y=cy+offset+Math.sin(u*freq1*Math.PI*2+localPh)*amp*env*.6
-              +Math.sin(u*freq2*Math.PI*2)*amp*env*.4;
+      const y=cy+offset+Math.sin(u*freq1*Math.PI*2+localPh-wob(ANIM.t*2.2))*amp*env*.6
+              +Math.sin(u*freq2*Math.PI*2-wob(ANIM.t*1.4))*amp*env*.4;
       i?ctx.lineTo(x,y):ctx.moveTo(x,y);
     }
     ctx.stroke();
@@ -2077,7 +2457,8 @@ function modFlow(box,colA,colB){
   const phase=rnd(0,10);
   const field=(x,y)=>{
     const u=(x-box.x)*scale,v=(y-box.y)*scale;
-    return Math.sin(u*1.3+phase)+Math.cos(v*1.7+phase*.7)+Math.sin((u+v)*.9);
+    const ph=phase+wob(ANIM.t*0.6);
+    return Math.sin(u*1.3+ph)+Math.cos(v*1.7+ph*.7)+Math.sin((u+v)*.9-wob(ANIM.t*0.4));
   };
   const lines=rint(120,260);
   for(let k=0;k<lines;k++){
@@ -2112,7 +2493,10 @@ function modStars(box,col){
     const x=box.x+rng()*box.w, y=box.y+rng()*box.h;
     const br=Math.pow(rng(),3);
     const r=br>.85?2.2:br>.5?1.5:.9;
-    fillInk(ink,rnd(.4,1));
+    const ba=rnd(.4,1);
+    /* scintillation — each star twinkles on its own phase */
+    const tw=1-ANIM.amp*0.65*(0.5-0.5*Math.sin(ANIM.t*4+x*0.7+y*0.31));
+    fillInk(ink,ba*tw);
     ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
     /* occasional bright cross */
     if(br>.92){strokeInk(ink,.7,.6);
@@ -2147,8 +2531,8 @@ function modStringArt(box,col){
   }
   /* radiate strings */
   strokeInk(ink,.5,.7);
-  const tipX=box.x+box.w*rnd(.55,.85);
-  const tipY=box.y+box.h*rnd(.55,.9);
+  const tipX=box.x+box.w*rnd(.55,.85)+wob(box.w*0.13*Math.sin(ANIM.t*0.8));
+  const tipY=box.y+box.h*rnd(.55,.9)+wob(box.h*0.10*Math.cos(ANIM.t*0.6));
   for(let i=0;i<=N;i++){
     const t=i/N;
     const y=top+t*(bot-top);
@@ -2173,8 +2557,9 @@ function modDotOrbit(box,col){
     const p1={x:box.x+rnd(box.w*.2,box.w*.7),y:box.y+rnd(0,box.h)};
     const p2={x:box.x+rnd(box.w*.5,box.w*.95),y:box.y+rnd(0,box.h)};
     const dots=rint(40,90);
+    const fl=phase01(2.6,k*0.2);
     for(let i=0;i<=dots;i++){
-      const t=i/dots;
+      const t=ANIM.amp>0?((i/dots+fl)%1):(i/dots);
       const x=(1-t)*(1-t)*p0.x+2*(1-t)*t*p1.x+t*t*p2.x;
       const y=(1-t)*(1-t)*p0.y+2*(1-t)*t*p1.y+t*t*p2.y;
       const r=.8+t*1.4;
@@ -2195,8 +2580,8 @@ function modDgTip(box,colA,colB){
   const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
   const cx=box.x+box.w/2, cy=box.y+box.h*.55;
   const armLen=box.w*.38;
-  /* tipped past equilibrium */
-  const angle=rnd(-.55,-.32);
+  /* tipped past equilibrium — beam teeters under load */
+  const angle=rnd(-.55,-.32)+wob(0.11*Math.sin(ANIM.t*1.2));
   const dx=Math.cos(angle)*armLen, dy=Math.sin(angle)*armLen;
   ctx.save();
   /* faint horizon (where balance was) */
@@ -2213,9 +2598,11 @@ function modDgTip(box,colA,colB){
   /* angle arc */
   strokeInk(inkA,.7,1);
   ctx.beginPath();ctx.arc(cx,cy,armLen*.35,0,angle,true);ctx.stroke();
-  /* sphere falling from low end */
+  /* sphere falling from low end — released, falls, recurs */
   fillInk(inkB,.95);
-  const bx=cx+dx*1.05+rnd(8,40), by=cy+dy*1.05+rnd(8,40);
+  const fall=phase01(2.6);
+  const bx=cx+dx*1.05+rnd(8,40)+wob(fall*box.w*0.06),
+        by=cy+dy*1.05+rnd(8,40)+wob(fall*fall*box.h*0.42);
   ctx.beginPath();ctx.arc(bx,by,7,0,Math.PI*2);ctx.fill();
   /* trail */
   strokeInk(inkB,.4,.8);ctx.setLineDash([1,4]);
@@ -2259,11 +2646,17 @@ function modDgPan(box,colA,colB){
     ctx.beginPath();ctx.moveTo(cx,cy);
     ctx.lineTo(cx+Math.cos(a)*R*.95,cy+Math.sin(a)*R*.95);ctx.stroke();
   }
-  /* central eye */
+  /* sweeping surveillance beam */
+  if(ANIM.amp>0){const ba=ANIM.t*0.8;
+    strokeInk(inkA,.45*ANIM.amp,1.1);
+    ctx.beginPath();ctx.moveTo(cx,cy);
+    ctx.lineTo(cx+Math.cos(ba)*R*.95,cy+Math.sin(ba)*R*.95);ctx.stroke();}
+  /* central eye — pupil tracks the gaze */
   fillInk(inkA,.95);strokeInk(inkA,.95,1.4);
   ctx.beginPath();
   ctx.ellipse(cx,cy,R*.18,R*.09,0,0,Math.PI*2);ctx.stroke();
-  ctx.beginPath();ctx.arc(cx,cy,R*.06,0,Math.PI*2);ctx.fill();
+  const gx=cx+wob(Math.cos(ANIM.t*0.9)*R*0.10),gy=cy+wob(Math.sin(ANIM.t*0.9)*R*0.05);
+  ctx.beginPath();ctx.arc(gx,gy,R*.06,0,Math.PI*2);ctx.fill();
   ctx.restore();
 }
 
@@ -2301,9 +2694,13 @@ function modDgWall(box,colA,colB){
   /* dots inside (enclosed population) */
   fillInk(inkA,.9);
   const inN=rint(40,90);
+  const Tw=ANIM.t;
   for(let i=0;i<inN;i++){
     const x=ix+rnd(8,iw-8), y=iy+rnd(8,ih-8);
-    ctx.beginPath();ctx.arc(x,y,1.6,0,Math.PI*2);ctx.fill();
+    /* confined motion — bounded inside the enclosure */
+    const bx=clamp(x+wob(Math.sin(Tw*1.6+i*1.3)*5),ix+4,ix+iw-4);
+    const by=clamp(y+wob(Math.cos(Tw*1.4+i*0.7)*5),iy+4,iy+ih-4);
+    ctx.beginPath();ctx.arc(bx,by,1.6,0,Math.PI*2);ctx.fill();
   }
   /* sparse outside dots (those who left, or never entered) */
   fillInk(inkA,.6);
@@ -2339,6 +2736,10 @@ function modDgFed(box,colA,colB){
   ctx.beginPath();ctx.arc(lx,ly,5,0,Math.PI*2);ctx.fill();
   fillInk(inkA,.85);
   for(const p of sp){ctx.beginPath();ctx.arc(p.x,p.y,2.2,0,Math.PI*2);ctx.fill()}
+  /* hub broadcasts outward along every spoke (centralized flow) */
+  if(ANIM.amp>0){fillInk(inkA,ANIM.amp);
+    for(let i=0;i<sp.length;i++){const tt=phase01(1.9,i*0.1);
+      ctx.beginPath();ctx.arc(lx+(sp[i].x-lx)*tt,ly+(sp[i].y-ly)*tt,2.4,0,Math.PI*2);ctx.fill();}}
 
   /* divider — a faint vertical line */
   strokeInk(inkA,.25,1);ctx.setLineDash([2,5]);
@@ -2360,6 +2761,11 @@ function modDgFed(box,colA,colB){
   }
   fillInk(inkB,1);
   for(const p of mp){ctx.beginPath();ctx.arc(p.x,p.y,3.4,0,Math.PI*2);ctx.fill()}
+  /* peer-to-peer packets cross every edge (distributed flow) */
+  if(ANIM.amp>0){fillInk(inkB,ANIM.amp);
+    for(let i=0;i<meshN;i++)for(let j=i+1;j<meshN;j++){
+      const tt=phase01(2.5,(i*meshN+j)*0.07);
+      ctx.beginPath();ctx.arc(mp[i].x+(mp[j].x-mp[i].x)*tt,mp[i].y+(mp[j].y-mp[i].y)*tt,1.8,0,Math.PI*2);ctx.fill();}}
 
   /* small labels under each topology */
   ctx.fillStyle=rgba(inkA,.85);
@@ -2408,7 +2814,16 @@ function modDgSiph(box,colA,colB){
     ctx.lineTo(ex-Math.cos(aa-.45)*5,ey-Math.sin(aa-.45)*5);
     ctx.lineTo(ex-Math.cos(aa+.45)*5,ey-Math.sin(aa+.45)*5);
     ctx.closePath();ctx.fill();
+    if(ANIM.amp>0){/* packet drawn down the intake into the drain */
+      const tt=phase01(2.2,s.x*0.01+s.y*0.013),it=1-tt;
+      const px=it*it*s.x+2*it*tt*mx+tt*tt*ex;
+      const py=it*it*s.y+2*it*tt*my+tt*tt*ey;
+      fillInk(inkB,ANIM.amp);ctx.beginPath();ctx.arc(px,py,2.2,0,Math.PI*2);ctx.fill();
+      fillInk(inkB,1);}
   }
+  /* drain throat pulses as it swallows */
+  if(ANIM.amp>0){strokeInk(inkA,.5*ANIM.amp,1.2);
+    ctx.beginPath();ctx.arc(cx,cy,R*(0.25+0.5*phase01(1.4)),0,Math.PI*2);ctx.stroke();}
   ctx.restore();
 }
 
@@ -2443,9 +2858,13 @@ function modDgSeed(box,colA,colB){
   const sprouts=rint(2,4);
   for(let i=0;i<sprouts;i++){
     const offX=(i-(sprouts-1)/2)*7;
+    const baseY=cy-4;
+    /* growth pulse — each shoot lengthens and settles */
+    const g=1-ANIM.amp*0.5*(0.5-0.5*Math.sin(ANIM.t*1.1+i*0.6));
+    const c1y=baseY+(cy-r*.7-baseY)*g, topY=baseY+(cy-r-baseY)*g;
     ctx.beginPath();
-    ctx.moveTo(cx+offX,cy-4);
-    ctx.quadraticCurveTo(cx+offX+rnd(-8,8),cy-r*.7,cx+offX+rnd(-12,12),cy-r);
+    ctx.moveTo(cx+offX,baseY);
+    ctx.quadraticCurveTo(cx+offX+rnd(-8,8),c1y,cx+offX+rnd(-12,12),topY);
     ctx.stroke();
   }
   ctx.restore();
@@ -2491,6 +2910,13 @@ function modDgThr(box,colA,colB){
   ctx.font='600 10px "IBM Plex Mono",monospace';
   ctx.fillText('threshold',x0+8,yMid-4);
   ctx.fillText('here →',x0+.5*(x1-x0)+8,yMid+14);
+  /* a state climbs the curve, flaring as it crosses the threshold */
+  if(ANIM.amp>0){const u=phase01(3.6);
+    const x=x0+u*(x1-x0), s=1/(1+Math.exp(-(u-.5)*10)), y=y0+(y1-y0)*s;
+    const cross=Math.exp(-Math.pow((u-.5)*8,2));
+    strokeInk(inkA,cross*ANIM.amp,1.4);
+    ctx.beginPath();ctx.arc(x0+.5*(x1-x0),yMid,6+cross*9,0,Math.PI*2);ctx.stroke();
+    fillInk(inkB,ANIM.amp);ctx.beginPath();ctx.arc(x,y,4.5,0,Math.PI*2);ctx.fill();}
   ctx.restore();
 }
 
@@ -2498,10 +2924,12 @@ function modDgThr(box,colA,colB){
 function modDgMan(box,col){
   const ink=hexToRgb(col);
   ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
-  /* opening rule */
+  /* opening rule — draws itself in, like a marquee */
   strokeInk(ink,.9,1.4);
+  const ruleMax=Math.min(60,box.w*.2);
+  const ruleLen=ANIM.amp>0?ruleMax*(0.3+0.7*pingpong(2.8)):ruleMax;
   ctx.beginPath();ctx.moveTo(box.x+8,box.y+12);
-  ctx.lineTo(box.x+Math.min(60,box.w*.2),box.y+12);ctx.stroke();
+  ctx.lineTo(box.x+8+ruleLen,box.y+12);ctx.stroke();
   /* text lines */
   ctx.fillStyle=rgba(ink,.95);
   const size=Math.max(13,Math.min(box.w/22,28));
@@ -2545,11 +2973,13 @@ function modDgErod(box,col){
   fillInk(ink,.9);
   /* erosion direction (left→right or right→left) */
   const flip=chance(.5);
+  /* erosion front breathes back and forth across the field */
+  const thr=0.55-ANIM.amp*0.32*Math.sin(ANIM.t*0.8);
   for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){
     const u=flip?(1-i/cols):(i/cols);
     /* fall-off with slight noise */
     const p=Math.pow(u,2)+(rng()-.5)*.18;
-    if(p>.55)ctx.fillRect(box.x+i*s+1,box.y+j*s+1,s-2,s-2);
+    if(p>thr)ctx.fillRect(box.x+i*s+1,box.y+j*s+1,s-2,s-2);
   }
   /* small scatter of stragglers on the eroded side */
   for(let k=0;k<rint(6,18);k++){
@@ -2586,16 +3016,19 @@ function modPhScan(box,colA,colB){
   }
   /* scanlines */
   const lineH=Math.max(2,Math.round(box.h/130));
+  const roll=ANIM.amp>0?phase01(3.4)*box.h:0;
   for(let y=box.y;y<box.y+box.h;y+=lineH){
     let xoff=0;
-    for(const sw of sweeps)if(y>sw.y&&y<sw.y+sw.h)xoff=sw.off;
+    for(const sw of sweeps){const ay=box.y+(((sw.y-box.y)+roll)%box.h);
+      if(y>ay&&y<ay+sw.h)xoff=sw.off;}
     if(rng()<.05)continue;        /* random dropout */
     strokeInk(inkA,rnd(.35,.75),Math.max(.5,lineH-.5));
     ctx.beginPath();ctx.moveTo(box.x+xoff,y);ctx.lineTo(box.x+box.w+xoff,y);ctx.stroke();
   }
-  /* one brighter band in Ink B */
+  /* one brighter band in Ink B, rolling up the frame */
   fillInk(inkB,.22);
-  const sy=box.y+rnd(0,box.h*.7),sh=rnd(box.h*.06,box.h*.14);
+  let sy=box.y+rnd(0,box.h*.7);const sh=rnd(box.h*.06,box.h*.14);
+  if(ANIM.amp>0)sy=box.y+(((sy-box.y)-roll*1.4)%box.h+box.h)%box.h;
   ctx.fillRect(box.x,sy,box.w,sh);
   /* corner ID */
   ctx.fillStyle=rgba(inkA,.95);ctx.font='600 9px "IBM Plex Mono",monospace';
@@ -2609,6 +3042,7 @@ function modPhChrom(box,colA,colB){
   const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
   ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
   const off=Math.min(box.w,box.h)*rnd(.012,.03);
+  const ao=off*(1+wob(1.6*Math.sin(ANIM.t*2.3)));
   const shapes=rint(3,6);
   /* main bold shape stack */
   for(let i=0;i<shapes;i++){
@@ -2627,8 +3061,8 @@ function modPhChrom(box,colA,colB){
       else{ctx.beginPath();ctx.moveTo(cx-r+ix,cy+iy);ctx.lineTo(cx+r+ix,cy+iy);
         ctx.moveTo(cx+ix,cy-r+iy);ctx.lineTo(cx+ix,cy+r+iy);ctx.stroke();}
     };
-    draw(-off,0,inkA,.95,1.4);
-    draw(off,0,inkB,.95,1.4);
+    draw(-ao,0,inkA,.95,1.4);
+    draw(ao,0,inkB,.95,1.4);
   }
   /* fine register marks */
   strokeInk(inkA,.5,1);
@@ -2660,7 +3094,8 @@ function modPhDmosh(box,col){
       if(density<.28)continue;
       const stripeH=Math.max(1,Math.floor(rowH/4));
       const off=rnd(-colW*.35,colW*.35);
-      const block={x:x+off,y,w:colW*rnd(.55,1.05),h:rowH};
+      const jx=wob(colW*0.55*Math.sin(ANIM.t*3.2+i*0.7+j*1.3));
+      const block={x:x+off+jx,y,w:colW*rnd(.55,1.05),h:rowH};
       fillInk(ink,.55+density*.4);
       for(let yy=block.y;yy<block.y+block.h;yy+=stripeH*2){
         ctx.fillRect(block.x,yy,block.w,stripeH);
@@ -2669,7 +3104,8 @@ function modPhDmosh(box,col){
   }
   /* a single full-width smear stripe */
   if(chance(.6)){
-    const sy=box.y+rnd(0,box.h-rowH*1.2);
+    let sy=box.y+rnd(0,box.h-rowH*1.2);
+    if(ANIM.amp>0)sy=box.y+(((sy-box.y)+phase01(1.8)*box.h)%(box.h-rowH));
     fillInk(ink,.85);
     ctx.fillRect(box.x,sy,box.w,rowH*.3);
   }
@@ -2685,11 +3121,12 @@ function modPhPx(box,col){
   for(let i=0;i<cols;i++){
     const x=box.x+i*colW;
     const bands=rint(6,14);
+    const drift=ANIM.amp>0?phase01(2.6,i*0.05):0;
     for(let j=0;j<bands;j++){
       const t=j/bands;
       const y0=box.y+t*box.h;
       const y1=box.y+(j+1)/bands*box.h;
-      fillInk(ink,.18+t*.7);
+      fillInk(ink,.18+((t+drift)%1)*.7);
       ctx.fillRect(x,y0,colW*.92,y1-y0);
     }
   }
@@ -2729,7 +3166,10 @@ function modPhDTMF(box,colA,colB){
     h:box.h-labelH*2-pad*.8
   };
   const cw=keyArea.w/3, ch=keyArea.h/4;
-  const litR=rint(0,3), litC=rint(0,2);
+  let litR=rint(0,3), litC=rint(0,2);
+  if(ANIM.amp>0){/* step through a dialed sequence */
+    const idx=((litR*3+litC)+Math.floor(ANIM.t*2.2))%12;
+    litR=Math.floor(idx/3);litC=idx%3;}
   const litIdx=litR*3+litC;
 
   strokeInk(inkB,.85,1.2);
@@ -2779,7 +3219,8 @@ function modPhHex(box,col){
   const lines=Math.floor((box.h-12)/lineH);
   const hexCh='0123456789ABCDEF'.split('');
   let addr=rint(0,0xFFFFF)<<4;
-  const hl=rint(2,Math.max(2,lines-2));
+  let hl=rint(2,Math.max(2,lines-2));
+  if(ANIM.amp>0)hl=Math.floor(phase01(2.4)*lines);
   for(let i=0;i<lines;i++){
     const y=box.y+12+i*lineH;
     if(i===hl){fillInk(ink,.18);ctx.fillRect(box.x,y-10,box.w,lineH);}
@@ -2846,6 +3287,8 @@ function modPhRt(box,colA,colB){
     if(best<0)break;trace.push(best);
   }
   strokeInk(inkA,.95,1.6);fillInk(inkA,1);
+  const segs=trace.length-1;
+  const g=ANIM.amp>0?phase01(3.2)*segs:-1, si=Math.floor(g), lt=g-si;
   for(let i=0;i<trace.length-1;i++){
     const p=nodes[trace[i]], q=nodes[trace[i+1]];
     const mx=(p.x+q.x)/2+rnd(-10,10), my=(p.y+q.y)/2+rnd(-14,14);
@@ -2854,6 +3297,11 @@ function modPhRt(box,colA,colB){
     ctx.beginPath();ctx.moveTo(q.x,q.y);
     ctx.lineTo(q.x-Math.cos(a-.4)*7,q.y-Math.sin(a-.4)*7);
     ctx.lineTo(q.x-Math.cos(a+.4)*7,q.y-Math.sin(a+.4)*7);ctx.closePath();ctx.fill();
+    if(i===si){/* call signal traversing the route */
+      const it=1-lt;
+      const px=it*it*p.x+2*it*lt*mx+lt*lt*q.x;
+      const py=it*it*p.y+2*it*lt*my+lt*lt*q.y;
+      ctx.beginPath();ctx.arc(px,py,4,0,Math.PI*2);ctx.fill();}
   }
   /* endpoint markers + intercept */
   const start=nodes[trace[0]], end=nodes[trace[trace.length-1]];
@@ -2873,6 +3321,9 @@ function modPhRt(box,colA,colB){
       ctx.lineTo(mid.x+Math.cos(a)*22,mid.y+Math.sin(a)*22);
       ctx.stroke();
     }
+    if(ANIM.amp>0){/* interception ring expands outward */
+      strokeInk(inkA,.6*ANIM.amp,1.4);
+      ctx.beginPath();ctx.arc(mid.x,mid.y,11+phase01(1.3)*16,0,Math.PI*2);ctx.stroke();}
     ctx.fillStyle=rgba(inkA,1);
     ctx.font='800 10px "IBM Plex Mono",monospace';
     ctx.fillText('TAP',mid.x+26,mid.y+4);
@@ -2927,6 +3378,10 @@ function modPhBars(box,colA,colB){
   ctx.moveTo(box.x+4,box.y+4);ctx.lineTo(box.x+4,box.y+4+t);ctx.stroke();
   ctx.beginPath();ctx.moveTo(box.x+box.w-4,box.y+box.h-4);ctx.lineTo(box.x+box.w-4-t,box.y+box.h-4);
   ctx.moveTo(box.x+box.w-4,box.y+box.h-4);ctx.lineTo(box.x+box.w-4,box.y+box.h-4-t);ctx.stroke();
+  /* vertical-hold sync bar rolling down the frame */
+  if(ANIM.amp>0){const gy=box.y+phase01(2.6)*box.h;
+    fillInk(inkA,.55*ANIM.amp);ctx.fillRect(box.x,gy,box.w,Math.max(2,box.h*0.012));
+    fillInk(inkB,.3*ANIM.amp);ctx.fillRect(box.x,gy+Math.max(2,box.h*0.012),box.w,Math.max(1,box.h*0.006));}
   ctx.restore();
 }
 
