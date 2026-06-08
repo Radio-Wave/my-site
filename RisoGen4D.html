@@ -243,7 +243,7 @@
 
     <div class="group">
       <div class="ttl">Motion</div>
-      <div class="sub" style="margin-bottom:10px">Each module animates with math fitting its form — orbits orbit, waves travel, fields breathe. <kbd>Space</kbd> toggles.</div>
+      <div class="sub" style="margin-bottom:10px">Each module animates with math fitting its form — orbits orbit, waves travel, fields breathe. Works in <strong>Edit composition</strong> too: arranged layers animate in place (imported PNGs stay still). Play &amp; Export motion both honour your layout. <kbd>Space</kbd> toggles.</div>
       <div class="btn-row">
         <button id="motPlay">&#9654; Play</button>
         <button id="motReset" class="alt">Reset</button>
@@ -3760,6 +3760,12 @@ function drawSoloTransparent(){
 }
 
 function exportPNG(scale){
+  /* in edit mode, redraw without the selection handles so they don't bake
+     into the PNG, then restore the on-screen selection afterwards */
+  let restoreSel=null;
+  if(typeof scene!=='undefined'&&scene&&scene.editMode&&scene.selectedId!==null){
+    restoreSel=scene.selectedId;scene.selectedId=null;compositeScene();
+  }
   const W=+ui.w.value*scale,H=+ui.h.value*scale;
   const tmp=document.createElement('canvas');tmp.width=W;tmp.height=H;
   const tctx=tmp.getContext('2d');tctx.imageSmoothingEnabled=false;
@@ -3767,6 +3773,7 @@ function exportPNG(scale){
   const a=document.createElement('a');
   a.download=`risogen-${ui.seed.value}.png`;
   a.href=tmp.toDataURL('image/png');a.click();
+  if(restoreSel!==null){scene.selectedId=restoreSel;draw();}
 }
 
 /* ============================================================
@@ -4185,6 +4192,17 @@ function recolorLayer(L){
   L.cache=rasterizeModuleToCanvas(L.kind,box,L.layerKey,layerOverride(L));
 }
 
+/* render a generative layer at its native resolution for the CURRENT ANIM.t,
+   reusing its frozen variant (seedState) + colors/text overrides. Identical to
+   recolorLayer's body, but returns a fresh canvas instead of caching it — so
+   the layout holds still while the module's time term (ANIM.t) flows. Used by
+   compositeScene during motion playback / export. Image layers never call this. */
+function renderLayerLive(L){
+  if(rng&&rng.state&&typeof L.seedState==='number')rng.state.a=L.seedState>>>0;
+  const box={x:0,y:0,w:L.nativeW,h:L.nativeH};
+  return rasterizeModuleToCanvas(L.kind,box,L.layerKey,layerOverride(L));
+}
+
 function regenerateLayer(L){
   /* fresh rng state → new layout, current colors preserved */
   if(!rng||!rng.state)setSeed(ui.seed.value||'riso');
@@ -4296,8 +4314,15 @@ function compositeScene(){
   const glow=+ui.gl.value;
   const glowColor=rgba(hexToRgb(ui.cA.value),.9);
 
+  /* animate generative layers live while playing or exporting motion: each is
+     re-rendered at ANIM.t through its frozen variant, then drawn with its
+     editor transform (moved / scaled / rotated). Image (PNG) layers stay
+     static. When idle we use the cached bitmap so editing stays flicker-free. */
+  const animate=(ANIM.playing||__recording||ANIM.t>0)&&ANIM.amp>0;
+
   for(const L of scene.layers){
     if(!L.visible)continue;
+    const src=(animate&&L.kind!=='image')?renderLayerLive(L):L.cache;
     ctx.save();
     ctx.globalCompositeOperation=L.blendMode;
     ctx.globalAlpha=L.opacity;
@@ -4307,9 +4332,9 @@ function compositeScene(){
     }
     ctx.translate(L.cx,L.cy);
     ctx.rotate(L.rotation);
-    const sx=L.w/L.cache.width, sy=L.h/L.cache.height;
+    const sx=L.w/src.width, sy=L.h/src.height;
     ctx.scale(sx,sy);
-    ctx.drawImage(L.cache,-L.cache.width/2,-L.cache.height/2);
+    ctx.drawImage(src,-src.width/2,-src.height/2);
     ctx.restore();
   }
   ctx.globalCompositeOperation='source-over';
@@ -4320,7 +4345,8 @@ function compositeScene(){
   setSeed((ui.seed.value||'riso')+'-grainfixed');
   applyGrain(W,H,+ui.g.value);
   if(ui.crop.checked)drawCropMarks(W,H);
-  if(scene.selectedId!==null)drawSelectionUI();
+  /* never bake the selection handles into an exported frame */
+  if(scene.selectedId!==null&&!__recording)drawSelectionUI();
 }
 
 function handlesLocal(L){
