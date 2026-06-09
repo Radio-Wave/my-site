@@ -186,6 +186,36 @@
     letter-spacing:.03em;text-transform:uppercase}
   .gen-ctrl .ratio-row button:hover{border-color:var(--accent);color:var(--ink)}
   .gen-ctrl input[type=checkbox]{accent-color:var(--accent)}
+  /* ---- keyframe / timeline editor ---- */
+  .kf-ctrl{border-top:1px solid #000;padding-top:10px;margin-top:10px}
+  .kf-ctrl .ttl{font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+  .kf-ctrl .ttl .kf-state{font-size:9px;letter-spacing:.04em;text-transform:none;
+    color:var(--muted)}
+  .kf-ctrl .ttl .kf-state.on{color:var(--accent)}
+  .kf-ph-row{display:flex;align-items:center;gap:7px;margin:2px 0 6px}
+  .kf-ph-row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+  .kf-ph-row .kf-time{font-size:10px;color:var(--ink);font-variant-numeric:tabular-nums;
+    min-width:42px;text-align:right}
+  .kf-track{position:relative;height:26px;background:#0e0e0e;border:1px solid #2a2a2a;
+    margin:2px 0 8px;cursor:pointer;border-radius:2px;overflow:hidden}
+  .kf-track .kf-base{position:absolute;left:0;right:0;top:50%;height:1px;background:#2a2a2a}
+  .kf-track .kf-ph{position:absolute;top:0;bottom:0;width:1px;background:var(--accent);
+    pointer-events:none}
+  .kf-track .kf-dia{position:absolute;top:50%;width:11px;height:11px;
+    background:#0e0e0e;border:1.5px solid var(--accent);
+    transform:translate(-50%,-50%) rotate(45deg);cursor:pointer}
+  .kf-track .kf-dia.sel{background:var(--accent)}
+  .kf-track .kf-empty{position:absolute;inset:0;display:flex;align-items:center;
+    justify-content:center;color:var(--muted);font-size:9.5px;letter-spacing:.04em;
+    pointer-events:none}
+  .kf-ctrl .btn-row{display:flex;gap:4px;margin-top:6px}
+  .kf-ctrl .btn-row button{flex:1;padding:6px 4px;font-size:10px}
+  .kf-ctrl label{display:flex;justify-content:space-between;align-items:center;
+    gap:6px;margin:6px 0 2px;color:var(--muted);font-size:10.5px}
+  .kf-ctrl select{width:120px;background:#0e0e0e;border:1px solid #2a2a2a;
+    color:var(--ink);padding:3px 5px;font-family:inherit;font-size:10.5px}
+  .kf-ctrl .mc-note{color:var(--muted);font-size:9.5px;margin-top:7px;line-height:1.4}
   .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(10px);
     background:#2a2a2a;color:var(--ink);font-family:inherit;font-size:11px;
     padding:8px 14px;pointer-events:none;opacity:0;transition:opacity .15s,transform .15s;z-index:999}
@@ -243,7 +273,7 @@
 
     <div class="group">
       <div class="ttl">Motion</div>
-      <div class="sub" style="margin-bottom:10px">Each module animates with math fitting its form — orbits orbit, waves travel, fields breathe. Works in <strong>Edit composition</strong> too: arranged layers animate in place (imported PNGs stay still). Play &amp; Export motion both honour your layout. <kbd>Space</kbd> toggles.</div>
+      <div class="sub" style="margin-bottom:10px">Each module animates with math fitting its form — orbits orbit, waves travel, fields breathe. In <strong>Edit composition</strong> you can also <strong>keyframe</strong> any layer (position, size, rotation, opacity) with eased curves — see the <em>Animation</em> track on a selected layer. Play &amp; Export motion render both the module motion <em>and</em> your keyframes over the clip length. <kbd>Space</kbd> toggles play.</div>
       <div class="btn-row">
         <button id="motPlay">&#9654; Play</button>
         <button id="motReset" class="alt">Reset</button>
@@ -769,7 +799,7 @@
         <button id="edit">Edit composition</button>
         <button id="reset" class="alt">Reset</button>
       </div>
-      <div class="edit-hint">Freezes the current composition into editable layers. Drag to move · handles to scale · top dot to rotate · arrows nudge · <kbd>Del</kbd> remove · <kbd>⌘D</kbd> duplicate · <kbd>⌘Z</kbd>/<kbd>⇧⌘Z</kbd> undo/redo.</div>
+      <div class="edit-hint">Freezes the current composition into editable layers. Drag to move · handles to scale · top dot to rotate · arrows nudge · <kbd>Del</kbd> remove · <kbd>⌘D</kbd> duplicate · <kbd>⌘Z</kbd>/<kbd>⇧⌘Z</kbd> undo/redo. Select a layer to keyframe its motion in the <em>Animation</em> track.</div>
     </div>
 
     <div class="group">
@@ -873,6 +903,39 @@
           <option value="hard-light">hard-light</option>
         </select>
       </label>
+
+      <div class="kf-ctrl" id="kfControls">
+        <div class="ttl">Animation <span class="kf-state" id="kfState">no keys</span></div>
+        <div class="kf-ph-row">
+          <input id="kfPlayhead" type="range" min="0" max="6" step="0.01" value="0">
+          <span class="kf-time" id="kfTime">0.00s</span>
+        </div>
+        <div class="kf-track" id="kfTrack" title="Keyframes for this layer — click empty space to seek, click a ◆ to select it"></div>
+        <div class="btn-row">
+          <button id="kfAdd" title="Capture this layer's position, size, rotation &amp; opacity at the playhead">&#9670; Add / update key</button>
+          <button id="kfDel" class="alt" title="Delete the selected keyframe">Delete key</button>
+        </div>
+        <div class="btn-row">
+          <button id="kfPrev" class="alt" title="Jump to previous keyframe">&#9664; key</button>
+          <button id="kfNext" class="alt" title="Jump to next keyframe">key &#9654;</button>
+          <button id="kfClear" class="alt" title="Remove all keyframes from this layer">Clear</button>
+        </div>
+        <label>Easing into key
+          <select id="kfEase">
+            <option value="linear">Linear</option>
+            <option value="easeIn">Ease In</option>
+            <option value="easeOut">Ease Out</option>
+            <option value="easeInOut" selected>Ease In-Out</option>
+            <option value="sine">Sine</option>
+            <option value="expoOut">Expo Out</option>
+            <option value="back">Back (overshoot)</option>
+            <option value="elastic">Elastic</option>
+            <option value="bounce">Bounce</option>
+            <option value="hold">Hold (step)</option>
+          </select>
+        </label>
+        <div class="mc-note">Set a keyframe to pin this layer's <b>position, size, rotation &amp; opacity</b> at the playhead. Scrub the playhead, then drag / scale / rotate the layer — it auto-keys. Each key eases into place with the chosen curve. <b>Play</b> &amp; <b>Export motion</b> (left panel) render over the clip length. Works on every layer kind.</div>
+      </div>
 
       <div class="mod-ctrl" id="modControls" style="display:none">
         <div class="ttl">Module</div>
@@ -1036,6 +1099,83 @@ const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 /* wobble: time term pre-scaled by global motion depth (0 ⇒ static) */
 const wob=v=>v*ANIM.amp;
 
+/* ============================================================
+   KEYFRAME ANIMATION (edit-composition timeline)
+   Each layer carries L.kfs = [{t, cx,cy,w,h,rotation,opacity, ease}]
+   sorted by time. The playhead is ANIM.t wrapped into the clip
+   length (ANIM.loop). compositeScene() bakes every keyframed layer
+   to its sampled pose before drawing, so the canvas, the selection
+   handles, hit-testing and Play/Export all stay in lock-step.
+============================================================ */
+const lerp=(a,b,u)=>a+(b-a)*u;
+/* easing curves: u in 0..1 → eased 0..1 (some overshoot past 1) */
+const EASING={
+  linear:u=>u,
+  easeIn:u=>u*u*u,
+  easeOut:u=>1-Math.pow(1-u,3),
+  easeInOut:u=>u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2,
+  sine:u=>-(Math.cos(Math.PI*u)-1)/2,
+  expoOut:u=>u>=1?1:1-Math.pow(2,-10*u),
+  back:u=>{const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(u-1,3)+c1*Math.pow(u-1,2);},
+  elastic:u=>{const c4=(2*Math.PI)/3;return u<=0?0:u>=1?1:Math.pow(2,-10*u)*Math.sin((u*10-.75)*c4)+1;},
+  bounce:u=>{const n1=7.5625,d1=2.75;
+    if(u<1/d1)return n1*u*u;
+    if(u<2/d1)return n1*(u-=1.5/d1)*u+.75;
+    if(u<2.5/d1)return n1*(u-=2.25/d1)*u+.9375;
+    return n1*(u-=2.625/d1)*u+.984375;},
+  hold:()=>0  /* step: holds the previous key, snaps only at the next key time */
+};
+const DEFAULT_EASE='easeInOut';
+/* current playhead position folded into [0, clip length) */
+function kfTime(){const L=ANIM.loop||1;let t=ANIM.t%L;if(t<0)t+=L;return t;}
+const poseOf=k=>({cx:k.cx,cy:k.cy,w:k.w,h:k.h,rotation:k.rotation,opacity:k.opacity});
+function isKeyframed(L){return !!(L&&L.kfs&&L.kfs.length)}
+/* interpolate a layer's animatable pose at clip time t (null if no keys) */
+function sampleLayerPose(L,t){
+  const ks=L.kfs;if(!ks||!ks.length)return null;
+  if(ks.length===1||t<=ks[0].t)return poseOf(ks[0]);
+  const last=ks[ks.length-1];
+  if(t>=last.t)return poseOf(last);
+  let i=0;while(i<ks.length-1&&ks[i+1].t<=t)i++;
+  const k0=ks[i],k1=ks[i+1];
+  const span=(k1.t-k0.t)||1;
+  const u=clamp((t-k0.t)/span,0,1);
+  const e=(EASING[k1.ease]||EASING.linear)(u);
+  return {
+    cx:lerp(k0.cx,k1.cx,e), cy:lerp(k0.cy,k1.cy,e),
+    w:lerp(k0.w,k1.w,e), h:lerp(k0.h,k1.h,e),
+    rotation:lerp(k0.rotation,k1.rotation,e), opacity:lerp(k0.opacity,k1.opacity,e)
+  };
+}
+/* capture the layer's current transform as a keyframe at time t
+   (replaces an existing key within ~1 frame, else inserts sorted).
+   returns the keyframe's index in L.kfs. */
+function upsertKeyframe(L,t){
+  if(!L.kfs)L.kfs=[];
+  const tol=Math.max(.001,(ANIM.loop||6)/240);
+  let i=L.kfs.findIndex(k=>Math.abs(k.t-t)<=tol);
+  const base={t,cx:L.cx,cy:L.cy,w:L.w,h:L.h,rotation:L.rotation,opacity:L.opacity};
+  if(i>=0){
+    const ease=L.kfs[i].ease||DEFAULT_EASE;
+    L.kfs[i]={...base,t:L.kfs[i].t,ease};
+  }else{
+    L.kfs.push({...base,ease:DEFAULT_EASE});
+    L.kfs.sort((a,b)=>a.t-b.t);
+    i=L.kfs.findIndex(k=>k.t===t);
+  }
+  return i;
+}
+/* bake every keyframed layer to the playhead so the editor is WYSIWYG.
+   skipId = a layer being actively dragged (leave its live transform alone). */
+function applyPlayheadToLayers(skipId){
+  const t=kfTime();
+  for(const L of scene.layers){
+    if(!isKeyframed(L)||L.id===skipId)continue;
+    const p=sampleLayerPose(L,t);if(!p)continue;
+    L.cx=p.cx;L.cy=p.cy;L.w=p.w;L.h=p.h;L.rotation=p.rotation;L.opacity=p.opacity;
+  }
+}
+
 /* ---------- canvas + state ---------- */
 const cv=document.getElementById('cv');
 let ctx=cv.getContext('2d');
@@ -1130,6 +1270,7 @@ function animLoop(ts){
   ANIM.last=ts;
   ANIM.t+=dt*ANIM.speed;
   draw();
+  if(scene&&scene.editMode)syncPlayheadUI();
   ANIM.raf=requestAnimationFrame(animLoop);
 }
 function setPlaying(v){
@@ -1138,10 +1279,10 @@ function setPlaying(v){
   if(v){ANIM.last=0;if(!ANIM.raf)ANIM.raf=requestAnimationFrame(animLoop)}
 }
 $('motPlay').onclick=()=>setPlaying(!ANIM.playing);
-$('motReset').onclick=()=>{ANIM.t=0;draw()};
+$('motReset').onclick=()=>{ANIM.t=0;draw();if(scene&&scene.editMode){syncPlayheadUI();refreshTimeline()}};
 $('motSpeed').addEventListener('input',e=>{ANIM.speed=+e.target.value;$('motSpeedV').textContent=(+e.target.value).toFixed(1)+'×'});
 $('motDepth').addEventListener('input',e=>{ANIM.amp=+e.target.value/100;$('motDepthV').textContent=e.target.value+'%';if(!ANIM.playing)draw()});
-$('motLoop').addEventListener('input',e=>{ANIM.loop=+e.target.value;$('motLoopV').textContent=e.target.value+'s'});
+$('motLoop').addEventListener('input',e=>{ANIM.loop=+e.target.value;$('motLoopV').textContent=e.target.value+'s';if(scene&&scene.editMode){syncPlayheadUI();refreshTimeline()}});
 const REC_FPS=24;
 let __recording=false;
 function setProgress(pct){
@@ -4165,7 +4306,8 @@ function makeLayer(kind,box,layerKey,idx,name){
     name:name||`${String(idx).padStart(2,'0')} ${MODULE_LABELS[kind]||kind} [${layerKey}]`,
     cache:cnv, nativeW:cnv.width, nativeH:cnv.height,
     inkA:null, inkB:null, seedState,
-    genCorpus:'', genWords:'', genOrder:false
+    genCorpus:'', genWords:'', genOrder:false,
+    kfs:[]
   };
 }
 
@@ -4302,6 +4444,9 @@ function resetEditor(){
 }
 
 function compositeScene(){
+  /* bake keyframed layers to the current playhead (skip the one being
+     dragged so its live transform shows through) before measuring/drawing */
+  applyPlayheadToLayers(drag?drag.layerId:null);
   const W=+ui.w.value,H=+ui.h.value;
   cv.width=W;cv.height=H;
   cv.style.background=ui.cP.value;
@@ -4474,11 +4619,13 @@ window.addEventListener('mousemove',e=>{
   }else if(drag.type==='resize'){
     applyResize(L,drag.handle,wp,drag.init,e.shiftKey);
   }
+  /* a keyframed layer auto-keys at the playhead as you drag/scale/rotate */
+  if(isKeyframed(L))upsertKeyframe(L,kfTime());
   draw();updateDetail();
 });
 
 window.addEventListener('mouseup',()=>{
-  if(drag){pushHistory();drag=null}
+  if(drag){pushHistory();drag=null;refreshTimeline()}
 });
 
 function snapshotTransform(L){
@@ -4545,7 +4692,8 @@ function pushHistory(){
     text:L.text, fontFamily:L.fontFamily, fontSize:L.fontSize,
     fontWeight:L.fontWeight, fontStyle:L.fontStyle, align:L.align,
     color:L.color, lineHeight:L.lineHeight, letterSpacing:L.letterSpacing,
-    transform:L.transform
+    transform:L.transform,
+    kfs:(L.kfs||[]).map(k=>({...k}))
   }));
   scene.history.push({layers:snap,selectedId:scene.selectedId});
   if(scene.history.length>60)scene.history.shift();
@@ -4553,7 +4701,7 @@ function pushHistory(){
 }
 function restoreHistory(){
   const h=scene.history[scene.historyIdx];if(!h)return;
-  scene.layers=h.layers.map(s=>({...s}));
+  scene.layers=h.layers.map(s=>({...s,kfs:(s.kfs||[]).map(k=>({...k}))}));
   scene.selectedId=h.selectedId;
   draw();refreshLayerPanel();updateDetail();
 }
@@ -4631,12 +4779,20 @@ function updateDetail(){
     modEl.style.display='none';
   }
   updateTextControls();
+  /* reset the selected-keyframe pointer when the active layer changes */
+  if(L.id!==__tlLayerId){__tlLayerId=L.id;__selKf=-1;}
+  refreshTimeline();
 }
+let __tlLayerId=null;
 
 function bindDetailInputs(){
   const onTxn=(fn)=>(e)=>{
     const L=getLayer(scene.selectedId);if(!L)return;
-    fn(L,e);draw();refreshLayerPanel();
+    fn(L,e);
+    /* keep an existing animation in sync — editing a transform field
+       updates the keyframe at the playhead (name/blend aren't animated) */
+    if(isKeyframed(L)&&!['lN','lB'].includes(e.target.id))upsertKeyframe(L,kfTime());
+    draw();refreshLayerPanel();
   };
   $('lN').addEventListener('input',onTxn((L,e)=>L.name=e.target.value));
   $('lX').addEventListener('input',onTxn((L,e)=>L.cx=+e.target.value));
@@ -4664,7 +4820,8 @@ function layerDuplicate(){
   c.width=L.cache.width;c.height=L.cache.height;
   c.getContext('2d').drawImage(L.cache,0,0);
   const D={...L,id:scene.nextId++,name:L.name+' copy',
-    cx:L.cx+20,cy:L.cy+20,cache:c};
+    cx:L.cx+20,cy:L.cy+20,cache:c,
+    kfs:(L.kfs||[]).map(k=>({...k,cx:k.cx+20,cy:k.cy+20}))};
   scene.layers.push(D);
   scene.selectedId=D.id;
   pushHistory();draw();refreshLayerPanel();updateDetail();
@@ -4776,7 +4933,7 @@ function createTextLayer(initText){
     fontWeight:600, fontStyle:'normal',
     align:'left', color:'#1a1a1a',
     lineHeight:1.15, letterSpacing:0, transform:'none',
-    cache:null, nativeW:1, nativeH:1
+    cache:null, nativeW:1, nativeH:1, kfs:[]
   };
   L.name='Text: '+(L.text||'').split('\n')[0].slice(0,24);
   renderTextLayer(L);
@@ -4933,6 +5090,143 @@ function updateTextControls(){
   ['tAL','tAC','tAR'].forEach(id=>$(id).classList.toggle('on',$(id).dataset.v===L.align));
 }
 
+/* ============================================================
+   TIMELINE / KEYFRAME UI
+============================================================ */
+let __selKf=-1;  /* index of the selected keyframe in the current layer */
+
+function seekPlayhead(t){
+  const loop=ANIM.loop||1;
+  ANIM.t=clamp(t,0,loop);
+  draw();syncPlayheadUI();
+}
+
+/* lightweight per-frame UI sync (playhead slider, time label, marker) */
+function syncPlayheadUI(){
+  const loop=ANIM.loop||1;
+  const t=kfTime();
+  const ph=$('kfPlayhead');
+  if(ph){ph.max=loop;if(document.activeElement!==ph)ph.value=t;}
+  const lab=$('kfTime');if(lab)lab.textContent=t.toFixed(2)+'s';
+  const marker=$('kfPhMark');
+  if(marker)marker.style.left=(t/loop*100)+'%';
+}
+
+function refreshTimeline(){
+  const L=getLayer(scene.selectedId);
+  if(!L)return;
+  const loop=ANIM.loop||1;
+  const ks=L.kfs||[];
+  const state=$('kfState');
+  if(state){
+    state.textContent=ks.length?`${ks.length} key${ks.length>1?'s':''}`:'no keys';
+    state.classList.toggle('on',ks.length>0);
+  }
+  /* keyframe track: diamonds + playhead marker */
+  const track=$('kfTrack');
+  if(track){
+    track.innerHTML='';
+    const base=document.createElement('div');base.className='kf-base';track.appendChild(base);
+    if(!ks.length){
+      const em=document.createElement('div');em.className='kf-empty';
+      em.textContent='no keyframes — set one to start animating';
+      track.appendChild(em);
+    }
+    ks.forEach((k,i)=>{
+      const d=document.createElement('div');
+      d.className='kf-dia'+(i===__selKf?' sel':'');
+      d.style.left=(clamp(k.t/loop,0,1)*100)+'%';
+      d.title=`key ${i+1} · ${k.t.toFixed(2)}s · ${k.ease}`;
+      d.addEventListener('mousedown',ev=>{
+        ev.stopPropagation();
+        __selKf=i;seekPlayhead(k.t);
+      });
+      track.appendChild(d);
+    });
+    const mark=document.createElement('div');mark.className='kf-ph';mark.id='kfPhMark';
+    mark.style.left=(kfTime()/loop*100)+'%';
+    track.appendChild(mark);
+  }
+  /* easing select reflects the selected key (or the upcoming default) */
+  const es=$('kfEase');
+  if(es){
+    const k=ks[__selKf];
+    es.value=k?(k.ease||DEFAULT_EASE):DEFAULT_EASE;
+  }
+  syncPlayheadUI();
+}
+
+/* nearest keyframe index at the current playhead (within tolerance), else -1 */
+function kfIndexAtPlayhead(L){
+  if(!isKeyframed(L))return -1;
+  const t=kfTime(),tol=Math.max(.001,(ANIM.loop||6)/240);
+  return L.kfs.findIndex(k=>Math.abs(k.t-t)<=tol);
+}
+
+function bindTimelineControls(){
+  $('kfPlayhead').addEventListener('input',e=>{
+    if(ANIM.playing)setPlaying(false);
+    seekPlayhead(+e.target.value);
+    const L=getLayer(scene.selectedId);
+    if(L)__selKf=kfIndexAtPlayhead(L);
+    refreshTimeline();
+  });
+  /* click empty track to scrub */
+  $('kfTrack').addEventListener('mousedown',e=>{
+    if(e.target.classList.contains('kf-dia'))return;
+    const r=$('kfTrack').getBoundingClientRect();
+    const u=clamp((e.clientX-r.left)/r.width,0,1);
+    if(ANIM.playing)setPlaying(false);
+    seekPlayhead(u*(ANIM.loop||1));
+    const L=getLayer(scene.selectedId);
+    if(L)__selKf=kfIndexAtPlayhead(L);
+    refreshTimeline();
+  });
+  $('kfAdd').onclick=()=>{
+    const L=getLayer(scene.selectedId);if(!L)return;
+    __selKf=upsertKeyframe(L,kfTime());
+    pushHistory();draw();refreshTimeline();
+    showToast(L.kfs.length===1?'Keyframe set — scrub & move the layer to animate':'Keyframe updated');
+  };
+  $('kfDel').onclick=()=>{
+    const L=getLayer(scene.selectedId);if(!L||!isKeyframed(L))return;
+    let i=__selKf>=0?__selKf:kfIndexAtPlayhead(L);
+    if(i<0){showToast('No keyframe at the playhead to delete');return}
+    L.kfs.splice(i,1);__selKf=-1;
+    pushHistory();draw();refreshLayerPanel();
+  };
+  $('kfClear').onclick=()=>{
+    const L=getLayer(scene.selectedId);if(!L||!isKeyframed(L))return;
+    L.kfs=[];__selKf=-1;
+    pushHistory();draw();refreshLayerPanel();
+    showToast('Cleared all keyframes');
+  };
+  const jump=dir=>{
+    const L=getLayer(scene.selectedId);if(!L||!isKeyframed(L))return;
+    const t=kfTime();
+    let target=null,idx=-1;
+    L.kfs.forEach((k,i)=>{
+      if(dir>0&&k.t>t+1e-4&&(target===null||k.t<target)){target=k.t;idx=i}
+      if(dir<0&&k.t<t-1e-4&&(target===null||k.t>target)){target=k.t;idx=i}
+    });
+    if(target===null){ /* wrap to first/last */
+      idx=dir>0?0:L.kfs.length-1;target=L.kfs[idx].t;
+    }
+    __selKf=idx;
+    if(ANIM.playing)setPlaying(false);
+    seekPlayhead(target);refreshTimeline();
+  };
+  $('kfPrev').onclick=()=>jump(-1);
+  $('kfNext').onclick=()=>jump(1);
+  $('kfEase').addEventListener('change',e=>{
+    const L=getLayer(scene.selectedId);if(!L||!isKeyframed(L))return;
+    let i=__selKf>=0?__selKf:kfIndexAtPlayhead(L);
+    if(i<0){showToast('Select a keyframe (◆) to set its easing');return}
+    L.kfs[i].ease=e.target.value;
+    pushHistory();draw();refreshTimeline();
+  });
+}
+
 /* ---- image import (Phreaking logo, URL, file) ---- */
 const PHREAKING_LOGO_WHITE='https://phreaking.co.uk/assets/PhreakingLogoWhite.png';
 const PHREAKING_LOGO_BLACK='https://phreaking.co.uk/assets/PhreakingLogoBlack.png';
@@ -4970,7 +5264,7 @@ function addImageLayer(img,name){
     blendMode:'source-over', opacity:1,
     visible:true, locked:false,
     name:name||'Imported image',
-    cache:cnv, nativeW:cnv.width, nativeH:cnv.height
+    cache:cnv, nativeW:cnv.width, nativeH:cnv.height, kfs:[]
   };
   scene.layers.push(L);
   scene.selectedId=L.id;
@@ -5052,6 +5346,7 @@ $('layerText').onclick=()=>createTextLayer();
 bindDetailInputs();
 bindTextControls();
 bindModuleControls();
+bindTimelineControls();
 
 /* editor keyboard shortcuts (run only in edit mode) */
 window.addEventListener('keydown',e=>{
@@ -5071,7 +5366,9 @@ window.addEventListener('keydown',e=>{
     if(e.key==='ArrowRight'){L.cx+=step;moved=true}
     if(e.key==='ArrowUp'){L.cy-=step;moved=true}
     if(e.key==='ArrowDown'){L.cy+=step;moved=true}
-    if(moved){e.preventDefault();draw();updateDetail()}
+    if(moved){e.preventDefault();
+      if(isKeyframed(L))upsertKeyframe(L,kfTime());
+      draw();updateDetail()}
   }
 });
 
