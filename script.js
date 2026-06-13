@@ -3,7 +3,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const sidebar = document.querySelector('.sidebar');
   const lightbox = ensureLightbox();
 
-  if (sidebar) {
+  // Nav is inlined into each page for crawlability; fetch only as a fallback.
+  if (sidebar && !sidebar.querySelector('nav')) {
     fetch('nav.html')
       .then(r => r.text())
       .then(html => { sidebar.innerHTML = html; });
