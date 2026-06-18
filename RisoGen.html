@@ -285,6 +285,9 @@
       <label>Crop marks
         <input type="checkbox" id="crop">
       </label>
+      <label>Warm paper
+        <input type="checkbox" id="warmBg">
+      </label>
     </div>
 
     <div class="group">
@@ -354,6 +357,8 @@
         <div class="check"><input type="checkbox" id="mTab"  checked> table</div>
         <div class="check"><input type="checkbox" id="mTyp"  checked> caption</div>
         <div class="check"><input type="checkbox" id="mHead"> header</div>
+        <div class="check"><input type="checkbox" id="mBlk"> blackout</div>
+        <div class="check"><input type="checkbox" id="mCross"> reg crosses</div>
       </div>
 
       <div class="cat-ttl">Diagram (image 1)</div>
@@ -960,6 +965,29 @@
           </select>
         </label>
       </div>
+
+      <div class="mod-ctrl" id="imgControls" style="display:none">
+        <div class="ttl">Image · dither</div>
+        <label>Process
+          <select id="iMode">
+            <option value="none">none (original)</option>
+            <option value="floyd">Floyd–Steinberg</option>
+            <option value="bayer">Ordered (Bayer)</option>
+            <option value="halftone">Halftone dots</option>
+            <option value="threshold">Threshold (1-bit)</option>
+          </select>
+        </label>
+        <label>Pixel size <input id="iScale" type="range" min="1" max="12" step="1"></label>
+        <label>Brightness <input id="iBright" type="range" min="-100" max="100" step="1"></label>
+        <label>Contrast <input id="iContrast" type="range" min="-100" max="100" step="1"></label>
+        <label>Ink (dark) <input id="iInk" type="color"></label>
+        <label>Paper (light) <input id="iPaper" type="color"></label>
+        <label class="lock-row" style="justify-content:flex-start;gap:6px">
+          <input type="checkbox" id="iTransparent"> light areas transparent</label>
+        <label class="lock-row" style="justify-content:flex-start;gap:6px">
+          <input type="checkbox" id="iInvert"> invert</label>
+        <div class="mc-note">Reduces an imported image to a two-tone riso/print dither. Pixel size controls chunkiness; halftone draws newsprint dots. Light-area transparency lets the paper (or warm background) show through.</div>
+      </div>
     </div>
   </aside>
 </div>
@@ -996,14 +1024,14 @@ const $=id=>document.getElementById(id);
 const ui={
   seed:$('seed'),
   w:$('w'),h:$('h'),n:$('n'),g:$('g'),m:$('m'),gl:$('gl'),
-  gr:$('gr'),gc:$('gc'),crop:$('crop'),
+  gr:$('gr'),gc:$('gc'),crop:$('crop'),warmBg:$('warmBg'),
   blend:$('blend'),layout:$('layout'),
   cA:$('cA'),cB:$('cB'),cP:$('cP'),palLib:$('palLib'),
   corpus:$('corpus'),customText:$('customText'),
   solo:$('solo'),
   modules:{
     hex:$('mHex'),tri:$('mTri'),sq:$('mSq'),mesh:$('mMesh'),
-    pix:$('mPix'),net:$('mNet'),tab:$('mTab'),typ:$('mTyp'),head:$('mHead'),
+    pix:$('mPix'),net:$('mNet'),tab:$('mTab'),typ:$('mTyp'),head:$('mHead'),blk:$('mBlk'),cross:$('mCross'),
     dgvec:$('mDgVec'),dglis:$('mDgLis'),dgcage:$('mDgCage'),
     dgfun:$('mDgFun'),dghel:$('mDgHel'),dghour:$('mDgHour'),cube:$('mCube'),
     state:$('mState'),step:$('mStep'),phase:$('mPhase'),
@@ -1021,6 +1049,7 @@ const ui={
 const MODULE_LABELS={
   hex:'hex',tri:'triangles',sq:'square grid',mesh:'warped mesh',
   pix:'pixel blob',net:'network',tab:'number table',typ:'caption',head:'swiss header',
+  blk:'blackout text',cross:'reg crosses',
   dgvec:'diagram: vector field',dglis:'diagram: lissajous',
   dgcage:'diagram: cage',dgfun:'diagram: funnel',
   dghel:'diagram: helix',dghour:'diagram: hourglass',cube:'3D cube',
@@ -1065,7 +1094,7 @@ document.querySelectorAll('.size-presets button').forEach(b=>{
   });
 });
 [ui.cA,ui.cB,ui.cP].forEach(el=>el.addEventListener('input',()=>{el.parentElement.style.background=el.value;draw()}));
-[ui.blend,ui.layout,ui.corpus,ui.crop].forEach(el=>el.addEventListener('input',draw));
+[ui.blend,ui.layout,ui.corpus,ui.crop,ui.warmBg].forEach(el=>el.addEventListener('input',draw));
 ui.customText.addEventListener('input',draw);
 Object.values(ui.modules).forEach(el=>el.addEventListener('change',draw));
 ui.seed.addEventListener('change',draw);
@@ -1126,11 +1155,11 @@ const PRESETS={
     misreg:0,layout:'free',n:8,gr:2,gc:2,crop:true,corpus:'constellation',
     mods:['stars','strar','dot','sq','rings']},
   poster:{cA:'#ff5a3c',cB:'#2bbf94',cP:'#f4efe6',blend:'multiply',glow:0,grain:20,
-    misreg:2,layout:'grid',n:9,gr:3,gc:3,crop:true,corpus:'mixed',
+    misreg:2,layout:'grid',n:9,gr:3,gc:3,crop:true,warmBg:true,corpus:'mixed',
     mods:['hex','tri','mesh','pix','net','tab','dglis','dgfun','rings']},
-  cwsa:{cA:'#b04a2f',cB:'#3d5a3a',cP:'#ece4d2',blend:'multiply',glow:0,grain:28,
-    misreg:1,layout:'grid',n:9,gr:3,gc:3,crop:true,corpus:'sovereignty',
-    mods:['dgtip','dgpan','dgwall','dgfed','dgsiph','dgseed','dgthr','dgman','dgerod']},
+  cwsa:{cA:'#1a1a1a',cB:'#b04a2f',cP:'#ece4d2',blend:'multiply',glow:0,grain:28,
+    misreg:1,layout:'grid',n:9,gr:3,gc:3,crop:true,warmBg:true,corpus:'sovereignty',
+    mods:['blk','dgtip','dgpan','dgwall','dgfed','dgsiph','dgseed','dgthr','dgman']},
   phreak:{cA:'#ffb000',cB:'#ff3a8a',cP:'#0a0a0a',blend:'lighter',glow:6,grain:16,
     misreg:1,layout:'grid',n:8,gr:4,gc:2,crop:false,corpus:'hex',
     mods:['phscan','phchrom','phdmosh','phpx','phdtmf','phhex','phrt','phbars']}
@@ -1149,6 +1178,7 @@ function applyPreset(name){
   ui.gr.value=p.gr;$('grv').textContent=p.gr;
   ui.gc.value=p.gc;$('gcv').textContent=p.gc;
   ui.crop.checked=p.crop;
+  ui.warmBg.checked=!!p.warmBg;
   ui.corpus.value=p.corpus;
   Object.entries(ui.modules).forEach(([k,el])=>el.checked=p.mods.includes(k));
   document.querySelectorAll('.preset').forEach(el=>
@@ -1449,6 +1479,105 @@ function modHeader(box,col){
     ctx.fillText(b[1],box.x+(i+1)*colW+8,box.y+box.h-18)}
   ctx.font='600 9px "IBM Plex Mono",monospace';
   ctx.fillText('Herausgegeben vom · Édité par',box.x+8,box.y+box.h-4);
+  ctx.restore();
+}
+
+/* a single hand-drawn marker blackout bar: a filled slab with wobbly,
+   ragged top/bottom/ends and a second offset pass for marker build-up */
+function blackoutBar(x,y,w,h,ink){
+  if(w<=1)return;
+  const seg=Math.max(3,Math.round(w/16));
+  for(let pass=0;pass<2;pass++){
+    const ox=pass?rnd(-2,2):0, oy=pass?rnd(-1.6,1.6):0;
+    fillInk(ink,pass?.42:.95);
+    ctx.beginPath();
+    for(let i=0;i<=seg;i++){const t=i/seg;
+      const px=x+ox+t*w, py=y+oy+rnd(-1.7,1.7);
+      i?ctx.lineTo(px,py):ctx.moveTo(px,py);}
+    ctx.lineTo(x+ox+w+rnd(-1,4),y+oy+h*.5);          /* ragged right end */
+    for(let i=seg;i>=0;i--){const t=i/seg;
+      ctx.lineTo(x+ox+t*w,y+oy+h+rnd(-1.7,1.7));}
+    ctx.lineTo(x+ox+rnd(-4,1),y+oy+h*.5);            /* ragged left end */
+    ctx.closePath();ctx.fill();
+  }
+}
+
+/* Blackout / redaction poster block: rows of marker bars with a few words
+   left un-redacted (some on a highlighter swatch), the rest blacked out. */
+function modBlackout(box,colA,colB){
+  const ink=hexToRgb(colA), hi=hexToRgb(colB);
+  ctx.save();
+  ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  const fs=Math.max(12,Math.min(40,box.h/12));
+  ctx.font=`700 ${fs}px "IBM Plex Mono",monospace`;
+  ctx.textBaseline='alphabetic';
+  const lineH=fs*1.6, barH=fs*1.05;
+  const words=corpus();
+  const unit=ctx.measureText('XXXX').width;
+  let wi=0;
+  for(let y=box.y+fs*.4; y+barH<=box.y+box.h; y+=lineH){
+    let x=box.x+rnd(0,fs*.6);
+    const right=box.x+box.w-rnd(0,fs*.4);
+    while(x<right-fs*.5){
+      if(chance(.2)&&words.length){
+        const word=String(words[wi++%words.length]);
+        const ww=ctx.measureText(word).width;
+        if(x+ww>right){blackoutBar(x,y,right-x,barH,ink);x=right;continue;}
+        if(chance(.5)){ctx.save();ctx.globalAlpha=.5;
+          blackoutBar(x-3,y-barH*.04,ww+8,barH,hi);ctx.restore();}
+        fillInk(ink,.96);
+        ctx.fillText(word,x+1,y+barH*.78);
+        x+=ww+fs*rnd(.6,1.4);
+      }else{
+        let bw=0;const segs=rint(1,4);
+        for(let s=0;s<segs;s++)bw+=unit*rnd(.55,1.25);
+        bw=Math.min(bw,right-x);
+        blackoutBar(x,y,bw,barH,ink);
+        x+=bw+fs*rnd(.35,1.05);
+      }
+    }
+  }
+  ctx.restore();
+}
+
+/* a hand-drawn line: wobbles slightly off its true axis between the ends */
+function handStroke(x1,y1,x2,y2,rgb,a,lw){
+  strokeInk(rgb,a,lw);
+  const dx=x2-x1, dy=y2-y1, len=Math.hypot(dx,dy)||1;
+  const nx=-dy/len, ny=dx/len, amp=Math.min(.5,lw*.12+.18);
+  const seg=Math.max(2,Math.round(len/16));
+  ctx.beginPath();
+  for(let i=0;i<=seg;i++){
+    const t=i/seg, w=(i===0||i===seg)?0:rnd(-amp,amp);
+    const px=x1+dx*t+nx*w, py=y1+dy*t+ny*w;
+    i?ctx.lineTo(px,py):ctx.moveTo(px,py);
+  }
+  ctx.stroke();
+}
+
+/* Registration crosses — scattered hand-drawn plus marks. The horizontal
+   (middle) arm carries a colourful offset line below it, shifted left,
+   echoing a riso mis-registration. */
+function modCrosses(box,colA,colB){
+  const ink=hexToRgb(colA), accent=hexToRgb(colB);
+  ctx.save();
+  ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  const minD=Math.min(box.w,box.h);
+  const count=Math.max(2,Math.min(48,Math.round(box.w*box.h/rnd(16000,46000))));
+  for(let i=0;i<count;i++){
+    const cx=box.x+rnd(0,box.w), cy=box.y+rnd(0,box.h);
+    const s=rnd(minD*.018,minD*.075)*(chance(.18)?1.7:1);
+    const rot=rnd(-.07,.07);
+    const lw=Math.max(1.6,s*.1);
+    ctx.save();
+    ctx.translate(cx,cy);ctx.rotate(rot);
+    /* colourful offset line: parallel to the vertical arm, shifted left */
+    handStroke(-s*.1,-s, -s*.1,s, accent,.92,Math.max(1.8,lw*1.1));
+    /* black cross on top */
+    handStroke(-s,0, s,0, ink,.95,lw);          /* horizontal */
+    handStroke(0,-s, 0,s, ink,.95,lw);          /* vertical */
+    ctx.restore();
+  }
   ctx.restore();
 }
 
@@ -2934,6 +3063,125 @@ function modPhBars(box,colA,colB){
    GRAIN + CROP MARKS
 ============================================================ */
 
+/* Warm, hand-made recycled-paper treatment laid over the flat paper fill:
+   uneven warm mottling, fibre flecks and a soft vignette. Uses its own
+   seeded RNG so toggling it never shifts the module/layer composition. */
+function applyWarmPaper(W,H){
+  const r=mulberry32(xmur3((ui.seed.value||'riso')+'-warm')());
+  const base=hexToRgb(ui.cP.value);
+  const dark=[Math.max(0,base[0]-30),Math.max(0,base[1]-34),Math.max(0,base[2]-40)];
+  ctx.save();
+  /* uneven warm mottle */
+  ctx.globalCompositeOperation='multiply';
+  const blobs=Math.max(6,Math.round((W*H)/90000));
+  for(let i=0;i<blobs;i++){
+    const x=r()*W,y=r()*H,rad=(.08+r()*.24)*Math.max(W,H);
+    const a=(.025+r()*.05).toFixed(3);
+    const g=ctx.createRadialGradient(x,y,0,x,y,rad);
+    g.addColorStop(0,`rgba(${dark[0]},${dark[1]},${dark[2]},${a})`);
+    g.addColorStop(1,`rgba(${dark[0]},${dark[1]},${dark[2]},0)`);
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  }
+  /* paper fibres */
+  ctx.globalCompositeOperation='source-over';
+  const flecks=Math.round((W*H)/2600);
+  for(let i=0;i<flecks;i++){
+    const x=r()*W,y=r()*H,len=1+r()*4,ang=r()*Math.PI,light=r()<.5;
+    const c=light?[Math.min(255,base[0]+18),Math.min(255,base[1]+16),Math.min(255,base[2]+12)]:dark;
+    ctx.strokeStyle=`rgba(${c[0]},${c[1]},${c[2]},${(.04+r()*.12).toFixed(3)})`;
+    ctx.lineWidth=r()<.85?1:1.6;
+    ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(ang)*len,y+Math.sin(ang)*len);ctx.stroke();
+  }
+  /* soft vignette to darken the edges */
+  const vg=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.3,W/2,H/2,Math.max(W,H)*.72);
+  vg.addColorStop(0,'rgba(0,0,0,0)');
+  vg.addColorStop(1,`rgba(${dark[0]},${dark[1]},${dark[2]},.16)`);
+  ctx.globalCompositeOperation='multiply';
+  ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
+  ctx.restore();
+}
+
+/* Reduce an image layer to a two-tone print dither. Reads L.origCache (the
+   untouched import) and writes the processed result into L.cache so every
+   render path — preview, thumbnail, PSD export — picks it up unchanged. */
+function applyDither(L){
+  if(!L||L.kind!=='image'||!L.origCache)return;
+  const src=L.origCache, W=src.width, H=src.height;
+  const mode=L.iMode||'none';
+  if(mode==='none'){L.cache=src;L.nativeW=W;L.nativeH=H;return;}
+  const scale=Math.max(1,L.iScale||3);
+  const ink=hexToRgb(L.iInk||'#1a1a1a');
+  const paper=hexToRgb(L.iPaper||ui.cP.value);
+  const transp=L.iTransparent!==false, invert=!!L.iInvert;
+  const bright=(L.iBright||0)*2.55, contrast=(L.iContrast||0)*2.55;
+  const cf=(259*(contrast+255))/(255*(259-contrast));
+  const adj=g=>{g=cf*(g-128)+128+bright;return g<0?0:g>255?255:g;};
+
+  const out=document.createElement('canvas');out.width=W;out.height=H;
+  const octx=out.getContext('2d');
+
+  if(mode==='halftone'){
+    const cell=Math.max(2,scale*2);
+    const sw=Math.max(1,Math.round(W/cell)), sh=Math.max(1,Math.round(H/cell));
+    const tmp=document.createElement('canvas');tmp.width=sw;tmp.height=sh;
+    tmp.getContext('2d').drawImage(src,0,0,sw,sh);
+    const d=tmp.getContext('2d').getImageData(0,0,sw,sh).data;
+    if(!transp){octx.fillStyle=`rgb(${paper[0]},${paper[1]},${paper[2]})`;octx.fillRect(0,0,W,H);}
+    octx.fillStyle=`rgb(${ink[0]},${ink[1]},${ink[2]})`;
+    for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){
+      const i=(y*sw+x)*4;
+      if(d[i+3]<8)continue;
+      const g=adj(.299*d[i]+.587*d[i+1]+.114*d[i+2]);
+      let dark=1-g/255; if(invert)dark=1-dark;
+      const rr=dark*cell*.72;
+      if(rr>.3){octx.beginPath();octx.arc((x+.5)*cell,(y+.5)*cell,rr,0,Math.PI*2);octx.fill();}
+    }
+    L.cache=out;L.nativeW=W;L.nativeH=H;return;
+  }
+
+  /* error-diffusion / ordered / threshold on a downsampled grid */
+  const gw=Math.max(1,Math.round(W/scale)), gh=Math.max(1,Math.round(H/scale));
+  const tmp=document.createElement('canvas');tmp.width=gw;tmp.height=gh;
+  tmp.getContext('2d').drawImage(src,0,0,gw,gh);
+  const d=tmp.getContext('2d').getImageData(0,0,gw,gh).data;
+  const gray=new Float32Array(gw*gh), alpha=new Uint8Array(gw*gh);
+  for(let p=0,q=0;p<d.length;p+=4,q++){
+    gray[q]=adj(.299*d[p]+.587*d[p+1]+.114*d[p+2]);alpha[q]=d[p+3];
+  }
+  const bits=new Uint8Array(gw*gh);   /* 1 = ink */
+  if(mode==='floyd'){
+    for(let y=0;y<gh;y++)for(let x=0;x<gw;x++){
+      const i=y*gw+x, old=gray[i], nv=old<128?0:255;
+      bits[i]=nv===0?1:0;
+      const err=old-nv;
+      const add=(xx,yy,f)=>{if(xx<0||xx>=gw||yy<0||yy>=gh)return;gray[yy*gw+xx]+=err*f/16;};
+      add(x+1,y,7);add(x-1,y+1,3);add(x,y+1,5);add(x+1,y+1,1);
+    }
+  }else if(mode==='bayer'){
+    const M=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+    for(let y=0;y<gh;y++)for(let x=0;x<gw;x++){
+      const i=y*gw+x, thr=(M[y&3][x&3]+.5)/16*255;
+      bits[i]=gray[i]<thr?1:0;
+    }
+  }else{
+    for(let i=0;i<gray.length;i++)bits[i]=gray[i]<128?1:0;
+  }
+  if(invert)for(let i=0;i<bits.length;i++)bits[i]^=1;
+  const small=document.createElement('canvas');small.width=gw;small.height=gh;
+  const sctx=small.getContext('2d'), od=sctx.createImageData(gw,gh);
+  for(let i=0;i<bits.length;i++){
+    const o=i*4, a=alpha[i];
+    if(a<8){od.data[o+3]=0;}
+    else if(bits[i]){od.data[o]=ink[0];od.data[o+1]=ink[1];od.data[o+2]=ink[2];od.data[o+3]=a;}
+    else if(transp){od.data[o+3]=0;}
+    else{od.data[o]=paper[0];od.data[o+1]=paper[1];od.data[o+2]=paper[2];od.data[o+3]=a;}
+  }
+  sctx.putImageData(od,0,0);
+  octx.imageSmoothingEnabled=false;
+  octx.drawImage(small,0,0,gw,gh,0,0,W,H);
+  L.cache=out;L.nativeW=W;L.nativeH=H;
+}
+
 function applyGrain(W,H,amt){
   if(amt<=0)return;
   const img=ctx.getImageData(0,0,W,H);const d=img.data;
@@ -2976,7 +3224,7 @@ function drawCropMarks(W,H){
 ============================================================ */
 
 function assignLayer(kind){
-  const A_pref=['tri','pix','tab','typ','osc','label','head','cube','parts','state','step','phase','dgvec','dghour','dglis','stars','strar','dot','dgtip','dgman','dgthr','dgseed','dgerod','phscan','phhex','phbars','phdtmf'];
+  const A_pref=['tri','pix','tab','typ','osc','label','head','blk','cross','cube','parts','state','step','phase','dgvec','dghour','dglis','stars','strar','dot','dgtip','dgman','dgthr','dgseed','dgerod','phscan','phhex','phbars','phdtmf'];
   const B_pref=['hex','net','mesh','stream','rings','flow','dgcage','dgfun','dghel','dgpan','dgwall','dgfed','dgsiph','phchrom','phdmosh','phpx','phrt'];
   if(A_pref.includes(kind))return chance(.85)?'A':'B';
   if(B_pref.includes(kind))return chance(.85)?'B':'A';
@@ -3001,6 +3249,8 @@ function drawModule(kind,box,layer,override){
     case 'tab':modTable(box,col);break;
     case 'typ':modTyped(box,col);break;
     case 'head':modHeader(box,col);break;
+    case 'blk':modBlackout(box,colA,colB);break;
+    case 'cross':modCrosses(box,colA,colB);break;
     case 'dgvec':modDgVec(box,colA,colB);break;
     case 'dglis':modDgLis(box,col);break;
     case 'dgcage':modDgCage(box,colA,colB);break;
@@ -3057,6 +3307,7 @@ function draw(){
     if(typeof genState!=='undefined'&&(genState.active||genState.points.length>0))drawGenHUD();}}
 
   ctx.fillStyle=ui.cP.value;ctx.fillRect(0,0,W,H);
+  if(ui.warmBg.checked)applyWarmPaper(W,H);
 
   const enabled=[];
   for(const [k,el] of Object.entries(ui.modules))if(el.checked)enabled.push(k);
@@ -3120,6 +3371,7 @@ function drawSolo(forExport){
   cv.style.width=(W*scale)+'px';cv.style.height=(H*scale)+'px';
 
   ctx.fillStyle=ui.cP.value;ctx.fillRect(0,0,W,H);
+  if(ui.warmBg.checked)applyWarmPaper(W,H);
 
   const glow=+ui.gl.value;
   if(glow>0){ctx.shadowBlur=glow;ctx.shadowColor=rgba(hexToRgb(ui.cA.value),.9)}
@@ -3736,6 +3988,7 @@ function compositeScene(){
   cv.style.width=(W*scale)+'px';cv.style.height=(H*scale)+'px';
 
   ctx.fillStyle=ui.cP.value;ctx.fillRect(0,0,W,H);
+  if(ui.warmBg.checked)applyWarmPaper(W,H);
 
   const glow=+ui.gl.value;
   const glowColor=rgba(hexToRgb(ui.cA.value),.9);
@@ -3959,6 +4212,10 @@ function pushHistory(){
     cache:L.cache, nativeW:L.nativeW, nativeH:L.nativeH,
     inkA:L.inkA, inkB:L.inkB, seedState:L.seedState,
     genCorpus:L.genCorpus, genWords:L.genWords, genOrder:L.genOrder,
+    /* image dither fields (preserved through undo) */
+    origCache:L.origCache, iMode:L.iMode, iScale:L.iScale,
+    iBright:L.iBright, iContrast:L.iContrast, iInk:L.iInk,
+    iPaper:L.iPaper, iTransparent:L.iTransparent, iInvert:L.iInvert,
     /* text layer fields (preserved through undo) */
     text:L.text, fontFamily:L.fontFamily, fontSize:L.fontSize,
     fontWeight:L.fontWeight, fontStyle:L.fontStyle, align:L.align,
@@ -4048,7 +4305,40 @@ function updateDetail(){
   }else{
     modEl.style.display='none';
   }
+  /* image dither controls — only for imported image layers */
+  const imgEl=$('imgControls');
+  if(L&&L.kind==='image'){
+    imgEl.style.display='block';
+    $('iMode').value=L.iMode||'none';
+    $('iScale').value=L.iScale||3;
+    $('iBright').value=L.iBright||0;
+    $('iContrast').value=L.iContrast||0;
+    $('iInk').value=L.iInk||'#1a1a1a';
+    $('iPaper').value=L.iPaper||ui.cP.value;
+    $('iTransparent').checked=L.iTransparent!==false;
+    $('iInvert').checked=!!L.iInvert;
+  }else{
+    imgEl.style.display='none';
+  }
   updateTextControls();
+}
+
+function bindImageControls(){
+  const upd=(prop,parse)=>e=>{
+    const L=getLayer(scene.selectedId);if(!L||L.kind!=='image')return;
+    L[prop]=parse?parse(e.target):e.target.value;
+    applyDither(L);draw();refreshLayerPanel();
+  };
+  $('iMode').addEventListener('change',upd('iMode'));
+  $('iScale').addEventListener('input',upd('iScale',t=>+t.value));
+  $('iBright').addEventListener('input',upd('iBright',t=>+t.value));
+  $('iContrast').addEventListener('input',upd('iContrast',t=>+t.value));
+  $('iInk').addEventListener('input',upd('iInk'));
+  $('iPaper').addEventListener('input',upd('iPaper'));
+  $('iTransparent').addEventListener('change',upd('iTransparent',t=>t.checked));
+  $('iInvert').addEventListener('change',upd('iInvert',t=>t.checked));
+  ['iMode','iScale','iBright','iContrast','iInk','iPaper','iTransparent','iInvert']
+    .forEach(id=>$(id).addEventListener('change',()=>pushHistory()));
 }
 
 function bindDetailInputs(){
@@ -4388,7 +4678,9 @@ function addImageLayer(img,name){
     blendMode:'source-over', opacity:1,
     visible:true, locked:false,
     name:name||'Imported image',
-    cache:cnv, nativeW:cnv.width, nativeH:cnv.height
+    cache:cnv, origCache:cnv, nativeW:cnv.width, nativeH:cnv.height,
+    iMode:'none', iScale:3, iBright:0, iContrast:0,
+    iInk:'#1a1a1a', iPaper:ui.cP.value, iTransparent:true, iInvert:false
   };
   scene.layers.push(L);
   scene.selectedId=L.id;
@@ -4470,6 +4762,7 @@ $('layerText').onclick=()=>createTextLayer();
 bindDetailInputs();
 bindTextControls();
 bindModuleControls();
+bindImageControls();
 
 /* editor keyboard shortcuts (run only in edit mode) */
 window.addEventListener('keydown',e=>{
