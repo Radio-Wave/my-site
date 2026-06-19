@@ -1427,7 +1427,6 @@ function modPix(box,col){
 function modNet(box,colA,colB){
   const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
   ctx.save();
-  fillInk(inkB,.18);ctx.fillRect(box.x,box.y,box.w,box.h);
   strokeInk(inkA,.65,1);
   const cols=rint(6,11);
   for(let i=0;i<=cols;i++){const x=box.x+(i/cols)*box.w;
