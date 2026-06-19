@@ -416,6 +416,18 @@
         <div class="check"><input type="checkbox" id="mPhRt"> call route</div>
         <div class="check"><input type="checkbox" id="mPhBars"> test bars</div>
       </div>
+
+      <div class="cat-ttl">Overlay / border (for images &amp; posters)</div>
+      <div class="grid3">
+        <div class="check"><input type="checkbox" id="mOvMoire"> moiré</div>
+        <div class="check"><input type="checkbox" id="mOvGuil"> guilloché</div>
+        <div class="check"><input type="checkbox" id="mOvContour"> iso-contour</div>
+        <div class="check"><input type="checkbox" id="mOvHalf"> field halftone</div>
+        <div class="check"><input type="checkbox" id="mOvPhyllo"> phyllotaxis</div>
+        <div class="check"><input type="checkbox" id="mOvHarm"> harmonograph</div>
+        <div class="check"><input type="checkbox" id="mOvTruchet"> truchet</div>
+        <div class="check"><input type="checkbox" id="mOvWave"> interference</div>
+      </div>
       <button id="modClearAll" class="alt" style="margin-top:8px;font-size:9px;padding:4px 8px">Clear all modules</button>
     </div>
 
@@ -1043,7 +1055,10 @@ const ui={
     dgthr:$('mDgThr'),dgman:$('mDgMan'),dgerod:$('mDgErod'),
     phscan:$('mPhScan'),phchrom:$('mPhChrom'),phdmosh:$('mPhDmosh'),
     phpx:$('mPhPx'),phdtmf:$('mPhDTMF'),phhex:$('mPhHex'),
-    phrt:$('mPhRt'),phbars:$('mPhBars')}
+    phrt:$('mPhRt'),phbars:$('mPhBars'),
+    ovmoire:$('mOvMoire'),ovguil:$('mOvGuil'),ovcontour:$('mOvContour'),
+    ovhalf:$('mOvHalf'),ovphyllo:$('mOvPhyllo'),ovharm:$('mOvHarm'),
+    ovtruchet:$('mOvTruchet'),ovwave:$('mOvWave')}
 };
 
 const MODULE_LABELS={
@@ -1065,7 +1080,11 @@ const MODULE_LABELS={
   phscan:'scanlines (Phreak)',phchrom:'chroma split (Phreak)',
   phdmosh:'datamosh (Phreak)',phpx:'pixel sort (Phreak)',
   phdtmf:'DTMF keypad (Phreak)',phhex:'hex dump (Phreak)',
-  phrt:'call routing (Phreak)',phbars:'test bars (Phreak)'};
+  phrt:'call routing (Phreak)',phbars:'test bars (Phreak)',
+  ovmoire:'overlay: moiré interference',ovguil:'overlay: guilloché',
+  ovcontour:'overlay: iso-contour field',ovhalf:'overlay: field halftone',
+  ovphyllo:'overlay: phyllotaxis',ovharm:'overlay: harmonograph',
+  ovtruchet:'overlay: truchet tiling',ovwave:'overlay: wave interference'};
 
 /* populate solo selector */
 (function(){const sel=ui.solo;
@@ -3060,6 +3079,251 @@ function modPhBars(box,colA,colB){
 }
 
 /* ============================================================
+   OVERLAY / BORDER MODULES
+   Generative-math screens and frames built to sit *over* an image
+   or poster: thin, mostly-translucent line and dot fields derived
+   from interference, parametric curves and distance functions, so
+   the artwork beneath still reads through. They respect box
+   geometry — full-region use lays the field across the whole
+   poster, a sub-box confines it to that region.
+============================================================ */
+
+/* Moiré — two superimposed line gratings rotated by a small angle.
+   The beat frequency between them produces the fringe pattern; we
+   draw the rulings themselves and let the eye integrate the moiré. */
+function modOvMoire(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  const md=Math.min(box.w,box.h), diag=Math.hypot(box.w,box.h);
+  const cx=box.x+box.w/2, cy=box.y+box.h/2;
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  const radial=chance(.4);
+  const gratings=[{ink:inkA,a:0,sp:rnd(md*.022,md*.04)},
+                  {ink:inkB,a:rnd(.04,.18)*(chance(.5)?1:-1),sp:0}];
+  gratings[1].sp=gratings[0].sp*rnd(.96,1.05);   /* near-equal → wide fringes */
+  for(const g of gratings){
+    strokeInk(g.ink,.5,1);
+    if(radial){
+      /* concentric ring grating, second one scaled slightly */
+      const k=g===gratings[0]?1:rnd(1.02,1.06);
+      for(let r=g.sp;r<diag*.6;r+=g.sp){
+        ctx.beginPath();ctx.arc(cx,cy,r*k,0,Math.PI*2);ctx.stroke();
+      }
+    }else{
+      ctx.save();ctx.translate(cx,cy);ctx.rotate(g.a);
+      for(let x=-diag;x<diag;x+=g.sp){
+        ctx.beginPath();ctx.moveTo(x,-diag);ctx.lineTo(x,diag);ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+}
+
+/* Guilloché — interlaced rose / hypotrochoid curves, the security
+   engraving on banknotes. Drawn as a band hugging the perimeter so
+   the centre stays open for the image. */
+function modOvGuil(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  const cx=box.x+box.w/2, cy=box.y+box.h/2;
+  const R=Math.min(box.w,box.h)*.5*rnd(.86,.96);
+  const r=R*rnd(.5,.72);                 /* inner radius → ring band */
+  ctx.save();
+  const petals=rint(7,16);               /* lobes from the frequency ratio */
+  const amp=(R-r)*rnd(.4,.62);
+  const mid=(R+r)/2;
+  const N=900;
+  const passes=[{ink:inkA,ph:0,a:.7},{ink:inkB,ph:Math.PI/petals,a:.55}];
+  for(const p of passes){
+    strokeInk(p.ink,p.a,1);
+    ctx.beginPath();
+    for(let i=0;i<=N;i++){
+      const t=i/N*Math.PI*2;
+      const rad=mid+amp*Math.cos(petals*t+p.ph)*Math.cos(t*rnd(.999,1.001));
+      const x=cx+Math.cos(t)*rad, y=cy+Math.sin(t)*rad;
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    }
+    ctx.closePath();ctx.stroke();
+  }
+  /* clean bounding circles top & bottom of the band */
+  strokeInk(inkA,.6,1);
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
+  ctx.restore();
+}
+
+/* Iso-contour — level sets of a value field, like a topographic
+   map. A rounded-rectangle signed distance field gives offset
+   contours that read as an organic, breathing frame. */
+function modOvContour(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  const md=Math.min(box.w,box.h);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  const cx=box.x+box.w/2, cy=box.y+box.h/2;
+  /* two off-centre attractors warp the distance field */
+  const ax=cx+rnd(-box.w*.2,box.w*.2), ay=cy+rnd(-box.h*.2,box.h*.2);
+  const warp=rnd(.12,.3), freq=rnd(2,4);
+  const field=(x,y)=>{
+    const dx=Math.abs(x-cx)-box.w*.5*.82, dy=Math.abs(y-cy)-box.h*.5*.82;
+    const sdf=Math.max(dx,dy);           /* box SDF (negative inside) */
+    const d2=Math.hypot(x-ax,y-ay);
+    return sdf + Math.sin(d2/md*Math.PI*freq)*md*warp;
+  };
+  const levels=rint(7,12), step=md*.05;
+  const gx=64, gy=Math.round(gx*box.h/box.w);
+  const cw=box.w/gx, ch=box.h/gy;
+  for(let L=0;L<levels;L++){
+    const iso=-md*.35+L*step;
+    strokeInk(L%3===0?inkA:inkB, L%3===0?.7:.45, L%3===0?1.2:.8);
+    ctx.beginPath();
+    /* marching squares (segments only) */
+    for(let j=0;j<gy;j++)for(let i=0;i<gx;i++){
+      const x0=box.x+i*cw, y0=box.y+j*ch, x1=x0+cw, y1=y0+ch;
+      const a=field(x0,y0)-iso, b=field(x1,y0)-iso, c=field(x1,y1)-iso, d=field(x0,y1)-iso;
+      const ix=(p,q,va,vb)=>p+(q-p)*(va/(va-vb));
+      const pts=[];
+      if((a<0)!==(b<0))pts.push([ix(x0,x1,a,b),y0]);
+      if((b<0)!==(c<0))pts.push([x1,ix(y0,y1,b,c)]);
+      if((c<0)!==(d<0))pts.push([ix(x1,x0,c,d),y1]);
+      if((d<0)!==(a<0))pts.push([x0,ix(y1,y0,d,a)]);
+      if(pts.length>=2){ctx.moveTo(pts[0][0],pts[0][1]);ctx.lineTo(pts[1][0],pts[1][1]);}
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* Field halftone — a dot screen whose radius is driven by a 2D
+   function (interfering sine waves). An op-art tone that lets the
+   image read through the gaps. */
+function modOvHalf(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  const md=Math.min(box.w,box.h);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  const cell=Math.max(6,md*rnd(.022,.034));
+  const k1=rnd(.6,1.4), k2=rnd(.6,1.4), rot=rnd(0,Math.PI);
+  const cx=box.x+box.w/2, cy=box.y+box.h/2;
+  const ca=Math.cos(rot), sa=Math.sin(rot);
+  const edgeBias=chance(.5);             /* taper toward centre, framing the image */
+  for(let y=box.y+cell/2;y<box.y+box.h;y+=cell){
+    for(let x=box.x+cell/2;x<box.x+box.w;x+=cell){
+      const u=(x-cx)/md, v=(y-cy)/md;
+      const ur=u*ca-v*sa, vr=u*sa+v*ca;
+      let f=(Math.sin(ur*Math.PI*2*k1*4)+Math.sin(vr*Math.PI*2*k2*4))*.25+.5;
+      if(edgeBias){
+        const edge=1-Math.min(x-box.x,box.x+box.w-x,y-box.y,box.y+box.h-y)/(md*.4);
+        f*= .4+ .6*Math.max(0,edge);
+      }
+      const r=f*cell*.52;
+      if(r<.4)continue;
+      fillInk((u+v)>0?inkA:inkB, .6);
+      ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+/* Phyllotaxis — Vogel's model of a sunflower head: the n-th seed at
+   angle n·137.5° and radius √n. Pure golden-angle packing, drawn as
+   a thinning dot field anchored at a corner or the centre. */
+function modOvPhyllo(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  const md=Math.min(box.w,box.h);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  const anchors=[[box.x+box.w/2,box.y+box.h/2],[box.x,box.y],[box.x+box.w,box.y],
+                 [box.x,box.y+box.h],[box.x+box.w,box.y+box.h]];
+  const [ox,oy]=pick(anchors);
+  const golden=Math.PI*(3-Math.sqrt(5));
+  const n=rint(420,900), c=md*rnd(.028,.04);
+  for(let i=0;i<n;i++){
+    const a=i*golden, rad=c*Math.sqrt(i);
+    const x=ox+Math.cos(a)*rad, y=oy+Math.sin(a)*rad;
+    if(x<box.x-4||x>box.x+box.w+4||y<box.y-4||y>box.y+box.h+4)continue;
+    const t=i/n;
+    fillInk(t<.5?inkA:inkB, .35+.5*(1-t));
+    ctx.beginPath();ctx.arc(x,y,Math.max(.6,(1-t)*c*.16),0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* Harmonograph — two damped pendulums per axis trace a decaying
+   Lissajous figure. A single fine ink line; the slowly-detuned
+   frequencies give the characteristic drifting envelope. */
+function modOvHarm(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  const cx=box.x+box.w/2, cy=box.y+box.h/2;
+  const Ax=box.w*.42, Ay=box.h*.42;
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  const f=()=>rnd(1,5)+ (chance(.6)?rnd(-.02,.02):0);   /* near-integer detune */
+  const fx1=f(),fx2=f(),fy1=f(),fy2=f();
+  const px1=rnd(0,6.28),px2=rnd(0,6.28),py1=rnd(0,6.28),py2=rnd(0,6.28);
+  const d=rnd(.002,.006);                 /* damping */
+  const passes=chance(.5)?2:1;
+  for(let p=0;p<passes;p++){
+    strokeInk(p?inkB:inkA, p?.5:.7, 1);
+    ctx.beginPath();
+    const T=rnd(180,260), N=4000;
+    for(let i=0;i<=N;i++){
+      const t=i/N*T;
+      const e=Math.exp(-d*t);
+      const x=cx+ (Math.sin(t*fx1+px1)+Math.sin(t*fx2+px2))*.5*Ax*e;
+      const y=cy+ (Math.sin(t*fy1+py1)+Math.sin(t*fy2+py2))*.5*Ay*e;
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* Truchet — a grid of tiles each carrying two quarter-arcs in one of
+   two orientations, chosen at random. Continuous contours emerge
+   across the grid (Smith tiling). A woven net laid over the image. */
+function modOvTruchet(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  const md=Math.min(box.w,box.h);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  const s=Math.max(14,md*rnd(.07,.11));
+  const cols=Math.ceil(box.w/s)+1, rows=Math.ceil(box.h/s)+1;
+  const lw=Math.max(1.4,s*.12);
+  for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){
+    const x=box.x+i*s, y=box.y+j*s, r=s/2;
+    strokeInk(((i+j)%2)?inkA:inkB, .6, lw);
+    ctx.beginPath();
+    if(chance(.5)){
+      ctx.arc(x,y,r,0,Math.PI/2);
+      ctx.moveTo(x+s,y+s);ctx.arc(x+s,y+s,r,Math.PI,Math.PI*1.5);
+    }else{
+      ctx.arc(x+s,y,r,Math.PI/2,Math.PI);
+      ctx.moveTo(x,y+s);ctx.arc(x,y+s,r,Math.PI*1.5,Math.PI*2);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* Wave interference — several point emitters; we draw each source's
+   concentric wavefronts so their overlaps form the interference
+   pattern (ripple-tank / diffraction). */
+function modOvWave(box,colA,colB){
+  const inkA=hexToRgb(colA),inkB=hexToRgb(colB);
+  const md=Math.min(box.w,box.h), diag=Math.hypot(box.w,box.h);
+  ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.w,box.h);ctx.clip();
+  const sources=rint(2,4), wl=md*rnd(.05,.085);
+  const src=[];
+  for(let i=0;i<sources;i++)src.push({
+    x:box.x+rnd(box.w*.1,box.w*.9), y:box.y+rnd(box.h*.1,box.h*.9),
+    ink:i%2?inkB:inkA});
+  for(const s of src){
+    strokeInk(s.ink,.4,1);
+    for(let r=wl;r<diag;r+=wl){
+      ctx.beginPath();ctx.arc(s.x,s.y,r,0,Math.PI*2);ctx.stroke();
+    }
+    fillInk(s.ink,.9);
+    ctx.beginPath();ctx.arc(s.x,s.y,2.4,0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ============================================================
    GRAIN + CROP MARKS
 ============================================================ */
 
@@ -3224,7 +3488,7 @@ function drawCropMarks(W,H){
 ============================================================ */
 
 function assignLayer(kind){
-  const A_pref=['tri','pix','tab','typ','osc','label','head','blk','cross','cube','parts','state','step','phase','dgvec','dghour','dglis','stars','strar','dot','dgtip','dgman','dgthr','dgseed','dgerod','phscan','phhex','phbars','phdtmf'];
+  const A_pref=['tri','pix','tab','typ','osc','label','head','blk','cross','cube','parts','state','step','phase','dgvec','dghour','dglis','stars','strar','dot','dgtip','dgman','dgthr','dgseed','dgerod','phscan','phhex','phbars','phdtmf','ovmoire','ovguil','ovcontour','ovhalf','ovphyllo','ovharm','ovtruchet','ovwave'];
   const B_pref=['hex','net','mesh','stream','rings','flow','dgcage','dgfun','dghel','dgpan','dgwall','dgfed','dgsiph','phchrom','phdmosh','phpx','phrt'];
   if(A_pref.includes(kind))return chance(.85)?'A':'B';
   if(B_pref.includes(kind))return chance(.85)?'B':'A';
@@ -3287,6 +3551,14 @@ function drawModule(kind,box,layer,override){
     case 'phhex':modPhHex(box,col);break;
     case 'phrt':modPhRt(box,colA,colB);break;
     case 'phbars':modPhBars(box,colA,colB);break;
+    case 'ovmoire':modOvMoire(box,colA,colB);break;
+    case 'ovguil':modOvGuil(box,colA,colB);break;
+    case 'ovcontour':modOvContour(box,colA,colB);break;
+    case 'ovhalf':modOvHalf(box,colA,colB);break;
+    case 'ovphyllo':modOvPhyllo(box,colA,colB);break;
+    case 'ovharm':modOvHarm(box,colA,colB);break;
+    case 'ovtruchet':modOvTruchet(box,colA,colB);break;
+    case 'ovwave':modOvWave(box,colA,colB);break;
   }
   }finally{__layerTextOverride=null;__layerTextOrdered=false;__layerTextIdx=0;}
 }
